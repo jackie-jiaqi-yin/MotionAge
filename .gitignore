@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+.env
+.env.*
+
+# Local data and generated outputs
+data/
+artifacts/
+experiments/
+outputs/
+logs/
+tmp/
+
+# Model and array artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.parquet
+*.feather
+*.npy
+*.npz
+
+# Tabular exports are ignored by default; small fixtures can be allowlisted.
+*.csv
+*.tsv
+!tests/fixtures/**/*.csv
+!tests/fixtures/**/*.tsv
+
+# Notebooks and editor files
+.ipynb_checkpoints/
+.DS_Store
+.vscode/
+.idea/
