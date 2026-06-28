@@ -81,3 +81,27 @@ def build_trainval_refit_splits(id_splits: dict[str, np.ndarray]) -> dict[str, n
         "train": train_val_ids,
         "test": np.sort(np.unique(np.asarray(id_splits["test"]))),
     }
+
+
+def resolve_fixed_epoch_plan(
+    *,
+    max_epochs: int,
+    fixed_epochs: int | str | None,
+    resume_from_checkpoint: bool,
+    resumed_from_epoch: int,
+) -> dict[str, int]:
+    """Resolve fixed-epoch refit start and remaining epoch counts."""
+    epoch_budget = int(fixed_epochs if fixed_epochs is not None else max_epochs)
+    if fixed_epochs is None and int(max_epochs) < 1:
+        raise ValueError(f"max_epochs must be >= 1, got {max_epochs}.")
+    if epoch_budget < 1:
+        raise ValueError(f"fixed_epochs must be >= 1, got {epoch_budget}.")
+
+    resumed_epoch = int(resumed_from_epoch) if resume_from_checkpoint else 0
+    start_epoch = resumed_epoch + 1 if resumed_epoch > 0 else 1
+    return {
+        "epoch_budget": epoch_budget,
+        "start_epoch": start_epoch,
+        "resumed_from_epoch": resumed_epoch,
+        "epochs_remaining": max(epoch_budget - start_epoch + 1, 0),
+    }

@@ -114,3 +114,76 @@ def test_resolve_winner_trial_uses_explicit_or_ranked_summary_files(tmp_path: Pa
 
     with pytest.raises(FileNotFoundError, match="winner trial"):
         training.resolve_winner_trial(tmp_path / "missing", explicit_trial=None)
+
+
+def test_resolve_fixed_epoch_plan_uses_max_epochs_without_resume() -> None:
+    assert hasattr(training, "resolve_fixed_epoch_plan")
+
+    plan = training.resolve_fixed_epoch_plan(
+        max_epochs=12,
+        fixed_epochs=None,
+        resume_from_checkpoint=False,
+        resumed_from_epoch=5,
+    )
+
+    assert plan == {
+        "epoch_budget": 12,
+        "start_epoch": 1,
+        "resumed_from_epoch": 0,
+        "epochs_remaining": 12,
+    }
+
+
+def test_resolve_fixed_epoch_plan_uses_resume_start_epoch() -> None:
+    assert hasattr(training, "resolve_fixed_epoch_plan")
+
+    plan = training.resolve_fixed_epoch_plan(
+        max_epochs=12,
+        fixed_epochs="8",
+        resume_from_checkpoint=True,
+        resumed_from_epoch=3,
+    )
+
+    assert plan == {
+        "epoch_budget": 8,
+        "start_epoch": 4,
+        "resumed_from_epoch": 3,
+        "epochs_remaining": 5,
+    }
+
+
+def test_resolve_fixed_epoch_plan_handles_completed_resume_budget() -> None:
+    assert hasattr(training, "resolve_fixed_epoch_plan")
+
+    plan = training.resolve_fixed_epoch_plan(
+        max_epochs=12,
+        fixed_epochs=8,
+        resume_from_checkpoint=True,
+        resumed_from_epoch=10,
+    )
+
+    assert plan == {
+        "epoch_budget": 8,
+        "start_epoch": 11,
+        "resumed_from_epoch": 10,
+        "epochs_remaining": 0,
+    }
+
+
+def test_resolve_fixed_epoch_plan_rejects_invalid_epoch_budgets() -> None:
+    assert hasattr(training, "resolve_fixed_epoch_plan")
+
+    with pytest.raises(ValueError, match="fixed_epochs must be >= 1"):
+        training.resolve_fixed_epoch_plan(
+            max_epochs=12,
+            fixed_epochs=0,
+            resume_from_checkpoint=False,
+            resumed_from_epoch=0,
+        )
+    with pytest.raises(ValueError, match="max_epochs must be >= 1"):
+        training.resolve_fixed_epoch_plan(
+            max_epochs=0,
+            fixed_epochs=None,
+            resume_from_checkpoint=False,
+            resumed_from_epoch=0,
+        )

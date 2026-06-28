@@ -33,6 +33,7 @@ from motionage.training.optimizer import (
 from motionage.training.refit import (
     build_trainval_refit_splits,
     resolve_final_refit_config,
+    resolve_fixed_epoch_plan,
     resolve_winner_trial,
 )
 from motionage.training.runtime import configure_torch_cpu_threads
@@ -91,6 +92,7 @@ __all__ = [
     "predict",
     "resolve_device",
     "resolve_final_refit_config",
+    "resolve_fixed_epoch_plan",
     "resolve_freeze_stage",
     "resolve_task_type",
     "resolve_winner_trial",
