@@ -126,7 +126,8 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         )
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
-        output = f"{_paper_model_manifest_markdown(output_entries)}\n"
+        study = load_paper_study_manifest(args.manifest_path)
+        output = f"{_paper_model_manifest_markdown(study, output_entries)}\n"
     else:
         output = _paper_model_manifest_text(args.manifest_path, output_entries, family_counts)
 
@@ -199,8 +200,34 @@ def _paper_model_manifest_payload(
     }
 
 
-def _paper_model_manifest_markdown(entries: Sequence[PaperModelManifestEntry]) -> str:
+def _paper_model_manifest_markdown(
+    study: PaperStudyManifest,
+    entries: Sequence[PaperModelManifestEntry],
+) -> str:
+    return "\n\n".join(
+        [
+            _paper_study_manifest_markdown(study),
+            _paper_model_entries_markdown(entries),
+        ]
+    )
+
+
+def _paper_study_manifest_markdown(study: PaperStudyManifest) -> str:
     lines = [
+        "## Study",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    for field, value in asdict(study).items():
+        lines.append(f"| {field} | {value} |")
+    return "\n".join(lines)
+
+
+def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) -> str:
+    lines = [
+        "## Models",
+        "",
         "| Family | Model ID | Model type | Prediction mode | Source config |",
         "| --- | --- | --- | --- | --- |",
     ]

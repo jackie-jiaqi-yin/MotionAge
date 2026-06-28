@@ -73,10 +73,23 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     captured = capsys.readouterr()
     assert status == 0
     assert captured.err == ""
-    assert captured.out.splitlines()[:2] == [
-        "| Family | Model ID | Model type | Prediction mode | Source config |",
-        "| --- | --- | --- | --- | --- |",
+    assert captured.out.splitlines()[:5] == [
+        "## Study",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+        "| study_id | mortality_cv_primary_60m |",
     ]
+    assert "## Models" in captured.out
+    assert "| n_folds | 5 |" in captured.out
+    assert "| analysis_template_path | configs/paper/motionage_analysis.yaml |" in captured.out
+    assert "| official_feature_set | motionage_accel |" in captured.out
+    assert "\n".join(
+        [
+            "| Family | Model ID | Model type | Prediction mode | Source config |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    ) in captured.out
     assert (
         "| gru | gru_fitbit_only | gru_binary | - | configs/paper/gru_fitbit_only_60m.yaml |"
         in captured.out
@@ -110,6 +123,9 @@ def test_validate_paper_models_cli_can_filter_markdown_by_family(
     captured = capsys.readouterr()
     assert status == 0
     assert captured.err == ""
+    assert "| study_id | mortality_cv_primary_60m |" in captured.out
+    assert "| task | mortality_60m |" in captured.out
+    assert "## Models" in captured.out
     assert "lstm_fitbit_only" in captured.out
     assert "lstm_level1_residual" in captured.out
     assert "gru_fitbit_only" not in captured.out
@@ -257,7 +273,9 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert status == 0
     assert captured.out == ""
     assert captured.err == ""
-    assert markdown.startswith("| Family | Model ID | Model type | Prediction mode | Source config |\n")
+    assert markdown.startswith("## Study\n\n| Field | Value |\n")
+    assert "| study_id | mortality_cv_primary_60m |" in markdown
+    assert "## Models\n\n| Family | Model ID | Model type | Prediction mode | Source config |" in markdown
     assert "lstm_level1_residual" in markdown
 
 
@@ -357,7 +375,9 @@ def test_validate_paper_models_console_script_markdown_output() -> None:
         text=True,
     )
 
-    assert result.stdout.startswith("| Family | Model ID | Model type | Prediction mode | Source config |")
+    assert result.stdout.startswith("## Study\n\n| Field | Value |")
+    assert "| study_id | mortality_cv_primary_60m |" in result.stdout
+    assert "## Models" in result.stdout
     assert "transformer_level1_residual" in result.stdout
 
 
