@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from motionage import benchmarks
 from motionage.benchmarks.llm_age import (
     LLM_AGE_ACCEL_COLUMN,
     LLM_AGE_COLUMN,
@@ -13,6 +14,13 @@ from motionage.benchmarks.llm_age import (
     run_fold_benchmark,
     run_llm_age_benchmark_cv,
 )
+
+
+def test_llm_age_helpers_are_exported_from_benchmarks_namespace() -> None:
+    assert benchmarks.LLM_AGE_COLUMN == LLM_AGE_COLUMN
+    assert benchmarks.LLM_AGE_FEATURE_SETS == LLM_AGE_FEATURE_SETS
+    assert benchmarks.load_llm_age_participants is load_llm_age_participants
+    assert benchmarks.run_llm_age_benchmark_cv is run_llm_age_benchmark_cv
 
 
 def test_load_llm_age_participants_filters_failed_rows_and_builds_60m_label(tmp_path: Path) -> None:
