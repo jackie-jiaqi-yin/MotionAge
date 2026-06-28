@@ -195,6 +195,8 @@ def summarize_window_retention(
         target = _participant_target(group, target_column) if target_column is not None else None
         grouped.append((participant_id, attention, target))
 
+    eligible_participants = int(len(grouped))
+    eligible_events = int(sum(1 for _, _, target in grouped if target == 1))
     rows: list[dict[str, int | float]] = []
     for seq_len in seq_lens:
         seq_len = int(seq_len)
@@ -215,6 +217,16 @@ def summarize_window_retention(
                     retained_participants += 1
                     if target == 1:
                         retained_events += 1
+            participant_retention_rate = (
+                retained_participants / eligible_participants
+                if eligible_participants
+                else 0.0
+            )
+            event_retention_rate = (
+                retained_events / eligible_events
+                if eligible_events
+                else float("nan")
+            )
             rows.append(
                 {
                     "seq_len": int(seq_len),
@@ -223,6 +235,10 @@ def summarize_window_retention(
                     "retained_windows": int(retained_windows),
                     "retained_participants": int(retained_participants),
                     "retained_events": int(retained_events),
+                    "eligible_participants": eligible_participants,
+                    "eligible_events": eligible_events,
+                    "participant_retention_rate": float(participant_retention_rate),
+                    "event_retention_rate": float(event_retention_rate),
                 }
             )
     return pd.DataFrame(rows)

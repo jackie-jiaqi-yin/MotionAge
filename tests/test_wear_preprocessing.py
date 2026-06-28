@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -9,6 +11,16 @@ from motionage.preprocessing.wear import (
     retained_window_count,
     summarize_window_retention,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_reports_docs_describe_public_wear_sensitivity_rates() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "participant_retention_rate" in reports_doc
+    assert "event_retention_rate" in reports_doc
+    assert "participant identifiers" in reports_doc
 
 
 def test_detect_nonwear_choi_marks_long_zero_run() -> None:
@@ -112,6 +124,14 @@ def test_summarize_window_retention_counts_windows_participants_and_events() -> 
     assert row_len2["retained_windows"] == 2
     assert row_len2["retained_participants"] == 2
     assert row_len2["retained_events"] == 1
+    assert row_len2["eligible_participants"] == 2
+    assert row_len2["eligible_events"] == 1
+    assert row_len2["participant_retention_rate"] == 1.0
+    assert row_len2["event_retention_rate"] == 1.0
     assert row_len4["retained_windows"] == 1
     assert row_len4["retained_participants"] == 1
     assert row_len4["retained_events"] == 1
+    assert row_len4["eligible_participants"] == 2
+    assert row_len4["eligible_events"] == 1
+    assert row_len4["participant_retention_rate"] == 0.5
+    assert row_len4["event_retention_rate"] == 1.0
