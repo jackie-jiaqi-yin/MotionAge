@@ -1,0 +1,48 @@
+experiment:
+  name: synthetic_smoke
+  output_dir: outputs/synthetic_smoke
+  init_checkpoint: null
+  init_strict: false
+task:
+  type: binary_classification
+  selection_metric: auprc
+  threshold_metric: balanced_accuracy
+labeling:
+  followup_month_column: permth_int
+  followup_months: 60
+  target_definition: I(mortstat = 1 and permth_int <= 60)
+data:
+  parquet_path: examples/synthetic/activity_mortstat_joined.parquet
+  target_source: parquet
+  feature_columns: [intensity_mean, PAXHOUR, PAXDAY, attention_flag]
+  target_column: mortstat
+  id_column: SEQN
+  normalize_intensity: true
+split:
+  mode: runtime
+  test_size: 0.25
+  val_size: 0.25
+  random_seed: 42
+windowing:
+  seq_len: 24
+  stride_ratio: 1.0
+  target_mode: participant
+  min_attention_ratio: 0.3
+model:
+  type: gru_binary
+  hidden_size: 8
+  num_layers: 1
+  dropout: 0.0
+  hour_emb_dim: 4
+  day_emb_dim: 2
+training:
+  max_epochs: 2
+  batch_size: 8
+  eval_batch_size: 8
+  learning_rate: 0.001
+  weight_decay: 0.0
+  early_stopping_patience: 2
+  grad_clip_norm: 1.0
+  limit_train_batches: 2
+  limit_val_batches: 2
+device: cpu

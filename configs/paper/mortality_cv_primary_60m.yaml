@@ -1,0 +1,40 @@
+study:
+  study_id: mortality_cv_primary_60m
+  task: mortality_60m
+  n_folds: 5
+  fold_root: data/processed/splits/mortstat_60m_cv_seed42
+  training_seed: 42
+  analysis_template_path: configs/paper/motionage_analysis.yaml
+  official_feature_set: motionage_accel
+models:
+  - model_id: gru_fitbit_only
+    family: gru
+    source_config_path: configs/paper/gru_fitbit_only_60m.yaml
+  - model_id: gru_age_only_latefusion
+    family: gru
+    source_config_path: configs/paper/gru_age_only_latefusion_60m.yaml
+  - model_id: gru_level1_latefusion
+    family: gru
+    source_config_path: configs/paper/gru_level1_latefusion_60m.yaml
+  - model_id: gru_level1_residual
+    family: gru
+    source_config_path: configs/paper/gru_level1_residual_60m.yaml
+  - model_id: transformer_fitbit_only
+    family: transformer
+    source_config_path: configs/paper/transformer_fitbit_only_60m.yaml
+  - model_id: transformer_level1_latefusion
+    family: transformer
+    source_config_path: configs/paper/transformer_level1_latefusion_60m.yaml
+  - model_id: transformer_level1_residual
+    family: transformer
+    source_config_path: configs/paper/transformer_level1_residual_60m.yaml
+  - model_id: lstm_fitbit_only
+    family: lstm
+    source_config_path: configs/paper/lstm_fitbit_only_60m.yaml
+  - model_id: lstm_level1_latefusion
+    family: lstm
+    source_config_path: configs/paper/lstm_level1_latefusion_60m.yaml
+  - model_id: lstm_level1_residual
+    family: lstm
+    source_config_path: configs/paper/lstm_level1_residual_60m.yaml
+not_ready_models: []

@@ -1,0 +1,22 @@
+analysis:
+  name: motionage_primary_60m
+  output_dir: outputs/motionage_primary_60m
+  participant_predictions_dir: outputs/mortality_cv_primary_60m
+  id_column: SEQN
+  age_column: RIDAGEYR
+  sex_column: RIAGENDR
+  probability_column: probability
+  target_column: mortstat
+mapping:
+  probability_transform: logit
+  age_bin_column: age_bin
+  fit_partitions: [train]
+  strata: [sex]
+  clip_eps: 0.0001
+  weighted_fit: true
+  clamp_output_to_fit_age_range: false
+  min_stratum_participants: 100
+outputs:
+  participant_scores: outputs/motionage_primary_60m/participant_scores.csv
+  mapping_parameters: outputs/motionage_primary_60m/mapping_parameters.csv
+  evaluation_tables: outputs/motionage_primary_60m/evaluation_tables
