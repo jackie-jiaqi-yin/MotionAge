@@ -23,6 +23,46 @@ class PaperModelManifestEntry:
     prediction_mode: str | None
 
 
+@dataclass(frozen=True)
+class PaperStudyManifest:
+    """Resolved metadata for one public paper study manifest."""
+
+    study_id: str
+    task: str
+    n_folds: int
+    fold_root: str
+    training_seed: int
+    analysis_template_path: str
+    official_feature_set: str
+
+
+def load_paper_study_manifest(manifest_path: str | Path) -> PaperStudyManifest:
+    """Load and validate public study metadata from a paper manifest."""
+    path = Path(manifest_path)
+    manifest = _load_yaml(path)
+    study = manifest.get("study")
+    if not isinstance(study, dict):
+        raise ValueError("Paper model manifest must define a study mapping.")
+
+    repo_root = _infer_repo_root(path)
+    analysis_template_path = _required_text(
+        study,
+        "analysis_template_path",
+        context="study",
+    )
+    _resolve_study_analysis_template_path(analysis_template_path, repo_root=repo_root)
+
+    return PaperStudyManifest(
+        study_id=_required_text(study, "study_id", context="study"),
+        task=_required_text(study, "task", context="study"),
+        n_folds=_required_positive_int(study, "n_folds", context="study"),
+        fold_root=_required_text(study, "fold_root", context="study"),
+        training_seed=_required_int(study, "training_seed", context="study"),
+        analysis_template_path=analysis_template_path,
+        official_feature_set=_required_text(study, "official_feature_set", context="study"),
+    )
+
+
 def load_paper_model_manifest(
     manifest_path: str | Path,
 ) -> tuple[PaperModelManifestEntry, ...]:
@@ -87,6 +127,7 @@ def validate_paper_model_manifest(
     """Validate paper model manifest coverage and source-config consistency."""
     path = Path(manifest_path)
     manifest = _load_yaml(path)
+    load_paper_study_manifest(path)
     not_ready_models = manifest.get("not_ready_models", [])
     if not_ready_models:
         raise ValueError(f"Paper model manifest still has not_ready_models: {not_ready_models}")
@@ -123,11 +164,37 @@ def _resolve_public_config_path(source_config_path: str, *, repo_root: Path) -> 
     return resolved
 
 
+def _resolve_study_analysis_template_path(template_path: str, *, repo_root: Path) -> Path:
+    source_path = Path(template_path)
+    if source_path.is_absolute():
+        raise ValueError(
+            f"study.analysis_template_path must be repository-relative: {template_path}"
+        )
+    resolved = repo_root / source_path
+    if not resolved.exists():
+        raise FileNotFoundError(f"Study analysis template not found: {template_path}")
+    return resolved
+
+
 def _required_text(row: dict[str, Any], key: str, *, context: str) -> str:
     value = row.get(key)
     if value in (None, ""):
         raise ValueError(f"{context} must define {key}.")
     return str(value).strip()
+
+
+def _required_int(row: dict[str, Any], key: str, *, context: str) -> int:
+    value = row.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{context}.{key} must be an integer.")
+    return value
+
+
+def _required_positive_int(row: dict[str, Any], key: str, *, context: str) -> int:
+    value = _required_int(row, key, context=context)
+    if value <= 0:
+        raise ValueError(f"{context}.{key} must be a positive integer.")
+    return value
 
 
 def _validate_model_type_matches_family(

@@ -48,6 +48,21 @@ def test_load_paper_model_manifest_records_source_config_details() -> None:
     assert by_id["transformer_level1_residual"].source_model_type == "transformer_covariates_binary"
 
 
+def test_load_paper_study_manifest_records_public_study_metadata() -> None:
+    assert hasattr(motionage, "PaperStudyManifest")
+    assert hasattr(motionage, "load_paper_study_manifest")
+
+    study = motionage.load_paper_study_manifest(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml")
+
+    assert study.study_id == "mortality_cv_primary_60m"
+    assert study.task == "mortality_60m"
+    assert study.n_folds == 5
+    assert study.fold_root == "data/processed/splits/mortstat_60m_cv_seed42"
+    assert study.training_seed == 42
+    assert study.analysis_template_path == "configs/paper/motionage_analysis.yaml"
+    assert study.official_feature_set == "motionage_accel"
+
+
 def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     tmp_path: Path,
 ) -> None:
@@ -59,10 +74,15 @@ def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
         config_dir / "gru_only.yaml",
         {"task": {"type": "binary_classification"}, "model": {"type": "gru_binary"}},
     )
+    _write_yaml(
+        config_dir / "motionage_analysis.yaml",
+        {"analysis": {"name": "synthetic_motionage_analysis"}},
+    )
     manifest = config_dir / "manifest.yaml"
     _write_yaml(
         manifest,
         {
+            "study": _default_study_metadata(),
             "models": [
                 {
                     "model_id": "wrong_lstm",
@@ -80,6 +100,7 @@ def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     _write_yaml(
         manifest,
         {
+            "study": _default_study_metadata(),
             "models": [
                 {
                     "model_id": "gru_only",
@@ -92,6 +113,85 @@ def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     )
     with pytest.raises(ValueError, match="Missing required model families"):
         motionage.validate_paper_model_manifest(manifest, required_families=("gru", "lstm"))
+
+
+def test_validate_paper_model_manifest_rejects_missing_study_metadata(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest_with_models(
+        tmp_path,
+        [
+            {
+                "model_id": "gru_primary",
+                "family": "gru",
+                "source_config_path": "configs/paper/gru_primary.yaml",
+            }
+        ],
+        include_study=False,
+    )
+
+    with pytest.raises(ValueError, match="Paper model manifest must define a study mapping"):
+        motionage.validate_paper_model_manifest(manifest, required_families=("gru",))
+
+
+def test_validate_paper_model_manifest_rejects_invalid_study_fold_count(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest_with_models(
+        tmp_path,
+        [
+            {
+                "model_id": "gru_primary",
+                "family": "gru",
+                "source_config_path": "configs/paper/gru_primary.yaml",
+            }
+        ],
+        study_overrides={"n_folds": 0},
+    )
+
+    with pytest.raises(ValueError, match="study.n_folds must be a positive integer"):
+        motionage.validate_paper_model_manifest(manifest, required_families=("gru",))
+
+
+def test_validate_paper_model_manifest_rejects_absolute_study_template_path(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest_with_models(
+        tmp_path,
+        [
+            {
+                "model_id": "gru_primary",
+                "family": "gru",
+                "source_config_path": "configs/paper/gru_primary.yaml",
+            }
+        ],
+        study_overrides={"analysis_template_path": "/tmp/private_template.yaml"},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="study.analysis_template_path must be repository-relative",
+    ):
+        motionage.validate_paper_model_manifest(manifest, required_families=("gru",))
+
+
+def test_validate_paper_model_manifest_rejects_missing_study_template_path(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest_with_models(
+        tmp_path,
+        [
+            {
+                "model_id": "gru_primary",
+                "family": "gru",
+                "source_config_path": "configs/paper/gru_primary.yaml",
+            }
+        ],
+        study_overrides={"analysis_template_path": "configs/paper/missing_analysis.yaml"},
+    )
+
+    with pytest.raises(FileNotFoundError, match="Study analysis template not found"):
+        motionage.validate_paper_model_manifest(manifest, required_families=("gru",))
 
 
 def test_validate_paper_model_manifest_rejects_duplicate_model_ids(tmp_path: Path) -> None:
@@ -147,9 +247,16 @@ def test_validate_paper_model_manifest_rejects_duplicate_source_config_paths(
 def _write_manifest_with_models(
     tmp_path: Path,
     models: list[dict[str, str]],
+    *,
+    include_study: bool = True,
+    study_overrides: dict[str, object] | None = None,
 ) -> Path:
     config_dir = tmp_path / "configs" / "paper"
     config_dir.mkdir(parents=True)
+    _write_yaml(
+        config_dir / "motionage_analysis.yaml",
+        {"analysis": {"name": "synthetic_motionage_analysis"}},
+    )
     for family in {model["family"] for model in models}:
         _write_yaml(
             config_dir / f"{family}_primary.yaml",
@@ -160,8 +267,23 @@ def _write_manifest_with_models(
         )
 
     manifest = config_dir / "manifest.yaml"
-    _write_yaml(manifest, {"models": models, "not_ready_models": []})
+    payload: dict[str, object] = {"models": models, "not_ready_models": []}
+    if include_study:
+        payload["study"] = _default_study_metadata() | (study_overrides or {})
+    _write_yaml(manifest, payload)
     return manifest
+
+
+def _default_study_metadata() -> dict[str, object]:
+    return {
+        "study_id": "synthetic_manifest",
+        "task": "mortality_60m",
+        "n_folds": 5,
+        "fold_root": "data/processed/splits/synthetic_cv",
+        "training_seed": 42,
+        "analysis_template_path": "configs/paper/motionage_analysis.yaml",
+        "official_feature_set": "motionage_accel",
+    }
 
 
 def _write_yaml(path: Path, payload: object) -> None:

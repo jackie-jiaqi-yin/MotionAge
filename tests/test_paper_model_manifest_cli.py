@@ -264,10 +264,23 @@ def test_validate_paper_models_cli_returns_error_for_invalid_manifest(
         config_dir / "gru_only.yaml",
         {"task": {"type": "binary_classification"}, "model": {"type": "gru_binary"}},
     )
+    _write_yaml(
+        config_dir / "motionage_analysis.yaml",
+        {"analysis": {"name": "synthetic_motionage_analysis"}},
+    )
     manifest = config_dir / "manifest.yaml"
     _write_yaml(
         manifest,
         {
+            "study": {
+                "study_id": "synthetic_manifest",
+                "task": "mortality_60m",
+                "n_folds": 5,
+                "fold_root": "data/processed/splits/synthetic_cv",
+                "training_seed": 42,
+                "analysis_template_path": "configs/paper/motionage_analysis.yaml",
+                "official_feature_set": "motionage_accel",
+            },
             "models": [
                 {
                     "model_id": "gru_only",

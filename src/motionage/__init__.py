@@ -6,7 +6,9 @@ from importlib.metadata import PackageNotFoundError, version
 
 from motionage.paper_manifest import (
     PaperModelManifestEntry,
+    PaperStudyManifest,
     load_paper_model_manifest,
+    load_paper_study_manifest,
     validate_paper_model_manifest,
 )
 
@@ -17,7 +19,9 @@ except PackageNotFoundError:
 
 __all__ = [
     "PaperModelManifestEntry",
+    "PaperStudyManifest",
     "__version__",
     "load_paper_model_manifest",
+    "load_paper_study_manifest",
     "validate_paper_model_manifest",
 ]
