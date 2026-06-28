@@ -30,6 +30,10 @@ from motionage.training.refit import (
 from motionage.training.runtime import configure_torch_cpu_threads
 from motionage.training.scheduler import build_optimizer_and_scheduler
 from motionage.training.selection import initial_best_metric, metric_improved
+from motionage.training.summary import (
+    build_fixed_epoch_training_summary,
+    build_training_summary,
+)
 from motionage.training.task import (
     BINARY_CLASSIFICATION,
     REGRESSION,
@@ -50,11 +54,13 @@ __all__ = [
     "align_meta_to_predictions",
     "apply_freeze_stage",
     "build_checkpoint_payload",
+    "build_fixed_epoch_training_summary",
     "build_loss_function",
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
     "build_training_log_row",
+    "build_training_summary",
     "build_trainval_refit_splits",
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
