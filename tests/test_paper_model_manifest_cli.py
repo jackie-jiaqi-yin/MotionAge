@@ -37,6 +37,15 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
     assert status == 0
     assert captured.err == ""
     assert payload["manifest_path"].endswith("mortality_cv_primary_60m.yaml")
+    assert payload["study"] == {
+        "study_id": "mortality_cv_primary_60m",
+        "task": "mortality_60m",
+        "n_folds": 5,
+        "fold_root": "data/processed/splits/mortstat_60m_cv_seed42",
+        "training_seed": 42,
+        "analysis_template_path": "configs/paper/motionage_analysis.yaml",
+        "official_feature_set": "motionage_accel",
+    }
     assert payload["model_count"] == 10
     assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
     assert payload["model_ids_by_family"]["lstm"] == [
@@ -409,6 +418,8 @@ def test_validate_paper_models_console_script_output_file_with_family_filter(tmp
     assert payload["model_count"] == 3
     assert payload["family_counts"] == {"transformer": 3}
     assert set(payload["model_ids_by_family"]) == {"transformer"}
+    assert payload["study"]["study_id"] == "mortality_cv_primary_60m"
+    assert payload["study"]["n_folds"] == 5
 
 
 def _write_yaml(path: Path, payload: object) -> None:

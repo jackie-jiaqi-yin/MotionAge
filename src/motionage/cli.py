@@ -12,7 +12,9 @@ from typing import Sequence
 
 from motionage.paper_manifest import (
     PaperModelManifestEntry,
+    PaperStudyManifest,
     REQUIRED_PAPER_MODEL_FAMILIES,
+    load_paper_study_manifest,
     validate_paper_model_manifest,
 )
 
@@ -115,7 +117,13 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
 
     family_counts = Counter(entry.family for entry in output_entries)
     if args.emit_json:
-        payload = _paper_model_manifest_payload(args.manifest_path, output_entries, family_counts)
+        study = load_paper_study_manifest(args.manifest_path)
+        payload = _paper_model_manifest_payload(
+            args.manifest_path,
+            study,
+            output_entries,
+            family_counts,
+        )
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
         output = f"{_paper_model_manifest_markdown(output_entries)}\n"
@@ -173,6 +181,7 @@ def _emit_output(output: str, output_path: Path | None) -> None:
 
 def _paper_model_manifest_payload(
     manifest_path: Path,
+    study: PaperStudyManifest,
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
 ) -> dict[str, object]:
@@ -182,6 +191,7 @@ def _paper_model_manifest_payload(
 
     return {
         "manifest_path": str(manifest_path),
+        "study": asdict(study),
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
         "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
