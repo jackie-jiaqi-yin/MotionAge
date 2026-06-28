@@ -22,6 +22,9 @@ The `motionage.reporting.tables` module provides small utilities for report repl
 The `motionage.reporting.mortality_cv` module provides mortality-CV report
 helpers that collect fold summaries, aggregate official and secondary feature
 sets, and format aggregate summary rows for publication tables.
+`build_public_mortality_cv_summary_table` converts those summaries into
+reader-facing labels and omits internal model ids, feature ids, and private
+experiment paths from public tables.
 
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.

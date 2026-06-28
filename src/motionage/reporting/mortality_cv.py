@@ -136,6 +136,51 @@ def build_mortality_cv_summary_table(
     return pd.DataFrame(rows, columns=output_columns)
 
 
+def build_public_mortality_cv_summary_table(
+    summary: pd.DataFrame,
+    *,
+    model_labels: dict[str, str] | None = None,
+    feature_labels: dict[str, str] | None = None,
+    official_only: bool = True,
+    metric_columns: Sequence[str] = MORTALITY_CV_METRIC_COLUMNS,
+    digits: int = 3,
+    missing: str = "",
+) -> pd.DataFrame:
+    """Format mortality-CV summaries with public labels and no internal paths."""
+    metric_columns = list(metric_columns)
+    output_columns = ["model", "feature_set", "fold_count", *metric_columns]
+    if summary.empty:
+        return pd.DataFrame(columns=output_columns)
+
+    _require_columns(summary, ["model_id", "stage2_experiment_id", "fold_count", "is_official"])
+    working = summary.copy()
+    if official_only:
+        working = working[working["is_official"].astype(bool)].copy()
+
+    formatted = build_mortality_cv_summary_table(
+        working,
+        metric_columns=metric_columns,
+        digits=digits,
+        missing=missing,
+    )
+    model_labels = model_labels or {}
+    feature_labels = feature_labels or {}
+
+    rows: list[dict[str, object]] = []
+    for row in formatted.to_dict(orient="records"):
+        model_id = str(row["model_id"])
+        feature_id = str(row["stage2_experiment_id"])
+        rows.append(
+            {
+                "model": model_labels.get(model_id, model_id),
+                "feature_set": feature_labels.get(feature_id, feature_id),
+                "fold_count": row["fold_count"],
+                **{metric: row[metric] for metric in metric_columns},
+            }
+        )
+    return pd.DataFrame(rows, columns=output_columns)
+
+
 def _require_columns(frame: pd.DataFrame, columns: list[str]) -> None:
     missing = [column for column in columns if column not in frame.columns]
     if missing:

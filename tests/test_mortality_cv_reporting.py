@@ -7,9 +7,20 @@ import pandas as pd
 
 from motionage.reporting.mortality_cv import (
     build_mortality_cv_summary_table,
+    build_public_mortality_cv_summary_table,
     collect_fold_metrics,
     summarize_mortality_cv_fold_metrics,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_reports_docs_describe_public_mortality_cv_table_helper() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "build_public_mortality_cv_summary_table" in reports_doc
+    assert "reader-facing labels" in reports_doc
+    assert "private experiment paths" in reports_doc
 
 
 def _write_fold_summary(
@@ -167,3 +178,72 @@ def test_build_mortality_cv_summary_table_formats_aggregate_metrics() -> None:
         "test_logloss": "0.488 +/- 0.010",
         "test_brier": "0.181 +/- 0.006",
     }
+
+
+def test_build_public_mortality_cv_summary_table_uses_reader_labels_and_omits_private_paths() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "model_id": "gru_fitbit_only",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.81234,
+                "test_auroc_std": 0.01567,
+                "test_auprc_mean": 0.31234,
+                "test_auprc_std": 0.02567,
+                "test_logloss_mean": 0.48765,
+                "test_logloss_std": 0.01012,
+                "test_brier_mean": 0.18123,
+                "test_brier_std": 0.00567,
+                "metrics_path": "internal-run/secondary_metrics.csv",
+            },
+            {
+                "model_id": "gru_fitbit_only",
+                "stage2_experiment_id": "stage1_probability",
+                "fold_count": 5,
+                "is_official": False,
+                "test_auroc_mean": 0.79876,
+                "test_auroc_std": 0.01432,
+                "test_auprc_mean": 0.29876,
+                "test_auprc_std": 0.02432,
+                "test_logloss_mean": 0.50123,
+                "test_logloss_std": 0.01234,
+                "test_brier_mean": 0.19123,
+                "test_brier_std": 0.00678,
+                "metrics_path": "internal-run/secondary_metrics.csv",
+            },
+        ]
+    )
+
+    table = build_public_mortality_cv_summary_table(
+        summary,
+        model_labels={"gru_fitbit_only": "GRU wearable"},
+        feature_labels={"motionage_accel": "MotionAge acceleration"},
+        official_only=True,
+        digits=3,
+    )
+
+    assert table.columns.tolist() == [
+        "model",
+        "feature_set",
+        "fold_count",
+        "test_auroc",
+        "test_auprc",
+        "test_logloss",
+        "test_brier",
+    ]
+    assert table.to_dict("records") == [
+        {
+            "model": "GRU wearable",
+            "feature_set": "MotionAge acceleration",
+            "fold_count": 5,
+            "test_auroc": "0.812 +/- 0.016",
+            "test_auprc": "0.312 +/- 0.026",
+            "test_logloss": "0.488 +/- 0.010",
+            "test_brier": "0.181 +/- 0.006",
+        }
+    ]
+    assert "metrics_path" not in table.columns
+    assert "model_id" not in table.columns
+    assert "stage2_experiment_id" not in table.columns
