@@ -16,6 +16,7 @@ from motionage.training.freeze import (
 )
 from motionage.training.loss import build_loss_function
 from motionage.training.limits import optional_positive_int
+from motionage.training.log_rows import build_training_log_row, nan_validation_metrics
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.optimizer import (
     OptimizerGroupSummary,
@@ -53,6 +54,7 @@ __all__ = [
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
+    "build_training_log_row",
     "build_trainval_refit_splits",
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
@@ -60,6 +62,7 @@ __all__ = [
     "initial_best_metric",
     "metric_improved",
     "mps_diagnostics",
+    "nan_validation_metrics",
     "optional_positive_int",
     "parse_freeze_schedule",
     "predict",
