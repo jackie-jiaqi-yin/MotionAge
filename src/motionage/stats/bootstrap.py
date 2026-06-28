@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from numbers import Real
+from typing import Sequence
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -109,6 +110,30 @@ def public_bootstrap_interval_row(
     if "p_value" in summary:
         row["p_value"] = _numeric(summary, "p_value")
     return row
+
+
+def public_bootstrap_interval_table(
+    summaries: Sequence[Mapping[str, object]],
+    *,
+    resampling_unit: str | None = None,
+) -> list[dict[str, str | float | int | bool]]:
+    """Return allowlisted bootstrap interval rows for public report tables."""
+    rows: list[dict[str, str | float | int | bool]] = []
+    for index, summary in enumerate(summaries):
+        metric = summary.get("metric")
+        if metric in (None, ""):
+            raise ValueError(f"Bootstrap summary at index {index} must include metric.")
+        comparison_value = summary.get("comparison")
+        comparison = None if comparison_value in (None, "") else str(comparison_value)
+        rows.append(
+            public_bootstrap_interval_row(
+                summary,
+                metric=str(metric),
+                comparison=comparison,
+                resampling_unit=resampling_unit,
+            )
+        )
+    return rows
 
 
 def _safe_observed_auroc(y_true: np.ndarray, y_prob: np.ndarray) -> float:

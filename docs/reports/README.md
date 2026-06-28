@@ -10,9 +10,10 @@ Planned reports:
 - Activity-profile interpretability
 
 Bootstrap and paired-AUROC interval tables should use
-`public_bootstrap_interval_row` to normalize estimates, confidence intervals,
-resampling metadata, and optional p-values into public-safe rows. Report rows
-should not include private resample draws, participant rows, or raw prediction
+`public_bootstrap_interval_row` or `public_bootstrap_interval_table` to normalize
+estimates, confidence intervals, resampling metadata, comparison labels, and
+optional p-values into public-safe rows. Report rows should not include raw
+resample draws, local bootstrap output paths, participant rows, or raw prediction
 tables.
 
 These reports should not include internal response text, ownership notes, or private planning context.
