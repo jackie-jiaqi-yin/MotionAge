@@ -42,9 +42,12 @@ def _score_tables() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def test_method_docs_describe_bootstrap_metadata_fields() -> None:
     method_doc = (REPO_ROOT / "docs" / "method.md").read_text(encoding="utf-8")
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
 
     for term in ("n_resamples_requested", "ci_level", "stratified", "fold_stratified"):
         assert term in method_doc
+    assert "public_bootstrap_interval_row" in reports_doc
+    assert "private resample draws" in reports_doc
 
 
 def test_safe_auc_matches_rank_definition_with_ties() -> None:

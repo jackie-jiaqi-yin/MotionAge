@@ -1,6 +1,6 @@
 """Statistical utilities for MotionAge reports."""
 
-from motionage.stats.bootstrap import bootstrap_binary_auroc
+from motionage.stats.bootstrap import bootstrap_binary_auroc, public_bootstrap_interval_row
 from motionage.stats.paired_auc import (
     fold_structured_paired_bootstrap_auc_delta,
     make_paired_score_frame,
@@ -15,5 +15,6 @@ __all__ = [
     "make_paired_score_frame",
     "paired_auc_delta",
     "paired_bootstrap_auc_delta",
+    "public_bootstrap_interval_row",
     "safe_auc",
 ]

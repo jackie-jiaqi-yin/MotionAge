@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from motionage.stats.bootstrap import bootstrap_binary_auroc
+from motionage.stats.bootstrap import bootstrap_binary_auroc, public_bootstrap_interval_row
 
 
 def test_bootstrap_binary_auroc_returns_reproducible_ci() -> None:
@@ -30,6 +30,66 @@ def test_bootstrap_binary_auroc_returns_reproducible_ci() -> None:
     assert first["ci_lower"] <= first["observed_auroc"] <= first["ci_upper"]
     assert first["ci_level"] == 0.95
     assert 0 < first["n_resamples_valid"] <= first["n_resamples_requested"]
+
+
+def test_public_bootstrap_interval_row_normalizes_binary_auroc_summary() -> None:
+    summary = {
+        "observed_auroc": 0.81,
+        "bootstrap_mean_auroc": 0.80,
+        "ci_lower": 0.72,
+        "ci_upper": 0.88,
+        "ci_level": 0.95,
+        "n_resamples_requested": 1000,
+        "n_resamples_valid": 997,
+        "private_resample_values": [0.7, 0.8],
+    }
+
+    row = public_bootstrap_interval_row(summary, metric="AUROC", resampling_unit="participant")
+
+    assert row == {
+        "metric": "AUROC",
+        "estimate": 0.81,
+        "bootstrap_mean": 0.80,
+        "ci_lower": 0.72,
+        "ci_upper": 0.88,
+        "ci_level": 0.95,
+        "n_resamples_requested": 1000,
+        "valid_resamples": 997,
+        "resampling_unit": "participant",
+    }
+    assert "private_resample_values" not in row
+
+
+def test_public_bootstrap_interval_row_normalizes_fold_structured_delta_summary() -> None:
+    summary = {
+        "observed_auc_delta": 0.06,
+        "bootstrap_mean_delta": 0.05,
+        "ci95_lower": 0.01,
+        "ci95_upper": 0.09,
+        "ci_level": 0.95,
+        "n_resamples_requested": 2000,
+        "valid_resamples": 2000,
+        "p_value": 0.04,
+        "resampling_unit": "fold_stratified",
+        "valid_folds": 5,
+    }
+
+    row = public_bootstrap_interval_row(summary, metric="paired AUROC delta", comparison="MotionAge - PhenoAge")
+
+    assert row == {
+        "metric": "paired AUROC delta",
+        "comparison": "MotionAge - PhenoAge",
+        "estimate": 0.06,
+        "bootstrap_mean": 0.05,
+        "ci_lower": 0.01,
+        "ci_upper": 0.09,
+        "ci_level": 0.95,
+        "n_resamples_requested": 2000,
+        "valid_resamples": 2000,
+        "resampling_unit": "fold_stratified",
+        "valid_folds": 5,
+        "p_value": 0.04,
+    }
 
 
 def test_bootstrap_binary_auroc_returns_observed_for_single_class_targets() -> None:
