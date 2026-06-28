@@ -41,19 +41,31 @@ def test_load_paper_model_manifest_records_source_config_details() -> None:
 
     assert by_id["gru_fitbit_only"].source_model_type == "gru_binary"
     assert by_id["gru_fitbit_only"].prediction_mode is None
+    assert by_id["gru_fitbit_only"].covariates_enabled is False
+    assert by_id["gru_fitbit_only"].covariate_levels == ()
+    assert by_id["gru_fitbit_only"].num_numeric_features is None
     assert by_id["gru_fitbit_only"].selection_metric == "auprc"
     assert by_id["gru_fitbit_only"].seq_len == 1008
     assert by_id["gru_fitbit_only"].stride_ratio == 1.0
     assert by_id["gru_fitbit_only"].max_epochs == 80
     assert by_id["gru_fitbit_only"].batch_size == 128
     assert by_id["gru_fitbit_only"].learning_rate == 0.001
+    assert by_id["gru_age_only_latefusion"].covariates_enabled is True
+    assert by_id["gru_age_only_latefusion"].covariate_levels == ("age",)
+    assert by_id["gru_age_only_latefusion"].num_numeric_features == 1
     assert by_id["gru_level1_latefusion"].source_model_type == "gru_covariates_binary"
     assert by_id["gru_level1_latefusion"].prediction_mode == "late_fusion"
+    assert by_id["gru_level1_latefusion"].covariate_levels == ("1",)
+    assert by_id["gru_level1_latefusion"].num_numeric_features == 8
     assert by_id["lstm_level1_residual"].source_model_type == "lstm_covariates_binary"
     assert by_id["lstm_level1_residual"].prediction_mode == "residual"
+    assert by_id["lstm_level1_residual"].covariates_enabled is True
+    assert by_id["lstm_level1_residual"].covariate_levels == ("1",)
     assert by_id["lstm_level1_residual"].seq_len == 1008
     assert by_id["lstm_level1_residual"].stride_ratio == 0.5
     assert by_id["transformer_level1_residual"].source_model_type == "transformer_covariates_binary"
+    assert by_id["transformer_level1_residual"].covariate_levels == ("1",)
+    assert by_id["transformer_level1_residual"].num_numeric_features == 8
     assert by_id["transformer_level1_residual"].seq_len == 576
     assert by_id["transformer_level1_residual"].batch_size == 64
     assert by_id["transformer_level1_residual"].learning_rate == 0.00039

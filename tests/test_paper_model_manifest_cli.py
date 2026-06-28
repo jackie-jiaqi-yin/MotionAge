@@ -61,6 +61,9 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "source_model_type": "gru_binary",
         "task_type": "binary_classification",
         "prediction_mode": None,
+        "covariates_enabled": False,
+        "covariate_levels": [],
+        "num_numeric_features": None,
         "selection_metric": "auprc",
         "seq_len": 1008,
         "stride_ratio": 1.0,
@@ -93,25 +96,27 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| official_feature_set | motionage_accel |" in captured.out
     assert "\n".join(
         [
-            "| Family | Model ID | Model type | Prediction mode | Seq len | Stride | "
-            "Epochs | Batch | LR | Selection | Source config |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| Family | Model ID | Model type | Prediction mode | Covariates | Levels | "
+            "Numeric features | Seq len | Stride | Epochs | Batch | LR | Selection | "
+            "Source config |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+            "--- | --- |",
         ]
     ) in captured.out
     assert (
-        "| gru | gru_fitbit_only | gru_binary | - | 1008 | 1.0 | 80 | 128 | 0.001 | "
-        "auprc | configs/paper/gru_fitbit_only_60m.yaml |"
+        "| gru | gru_fitbit_only | gru_binary | - | no | - | - | 1008 | 1.0 | 80 | 128 | "
+        "0.001 | auprc | configs/paper/gru_fitbit_only_60m.yaml |"
         in captured.out
     )
     assert (
-        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | 1008 | "
-        "0.5 | 80 | 128 | 0.001 | auprc | "
+        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | yes | 1 | 8 | "
+        "1008 | 0.5 | 80 | 128 | 0.001 | auprc | "
         "configs/paper/lstm_level1_residual_60m.yaml |"
         in captured.out
     )
     assert (
         "| transformer | transformer_level1_latefusion | transformer_covariates_binary | "
-        "late_fusion | 576 | 1.0 | 80 | 64 | 0.00039 | auprc | "
+        "late_fusion | yes | 1 | 8 | 576 | 1.0 | 80 | 64 | 0.00039 | auprc | "
         "configs/paper/transformer_level1_latefusion_60m.yaml |"
         in captured.out
     )
@@ -199,6 +204,9 @@ def test_validate_paper_models_cli_can_filter_json_by_model_id(
     assert payload["model_count"] == 1
     assert payload["family_counts"] == {"lstm": 1}
     assert payload["model_ids_by_family"] == {"lstm": ["lstm_level1_residual"]}
+    assert payload["models"][0]["covariates_enabled"] is True
+    assert payload["models"][0]["covariate_levels"] == ["1"]
+    assert payload["models"][0]["num_numeric_features"] == 8
     assert (
         payload["models"][0]["source_config_path"]
         == "configs/paper/lstm_level1_residual_60m.yaml"
@@ -391,8 +399,8 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert markdown.startswith("## Study\n\n| Field | Value |\n")
     assert "| study_id | mortality_cv_primary_60m |" in markdown
     assert (
-        "## Models\n\n| Family | Model ID | Model type | Prediction mode | Seq len | Stride | "
-        "Epochs | Batch | LR | Selection | Source config |"
+        "## Models\n\n| Family | Model ID | Model type | Prediction mode | Covariates | Levels | "
+        "Numeric features | Seq len | Stride | Epochs | Batch | LR | Selection | Source config |"
     ) in markdown
     assert "lstm_level1_residual" in markdown
 

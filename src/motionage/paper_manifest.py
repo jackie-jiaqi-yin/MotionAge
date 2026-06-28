@@ -21,6 +21,9 @@ class PaperModelManifestEntry:
     source_model_type: str
     task_type: str
     prediction_mode: str | None
+    covariates_enabled: bool
+    covariate_levels: tuple[str, ...]
+    num_numeric_features: int | None
     selection_metric: str
     seq_len: int
     stride_ratio: float
@@ -120,6 +123,11 @@ def load_paper_model_manifest(
         if not isinstance(training_cfg, dict):
             raise ValueError(f"{source_config_path} must define a training mapping.")
 
+        covariates_enabled, covariate_levels, num_numeric_features = _resolve_covariate_metadata(
+            source_config,
+            model_cfg,
+            source_config_path=source_config_path,
+        )
         prediction_mode = model_cfg.get("prediction_mode")
         entries.append(
             PaperModelManifestEntry(
@@ -129,6 +137,9 @@ def load_paper_model_manifest(
                 source_model_type=source_model_type,
                 task_type=task_type,
                 prediction_mode=str(prediction_mode) if prediction_mode is not None else None,
+                covariates_enabled=covariates_enabled,
+                covariate_levels=covariate_levels,
+                num_numeric_features=num_numeric_features,
                 selection_metric=selection_metric,
                 seq_len=_required_positive_int(
                     windowing_cfg,
@@ -249,6 +260,35 @@ def _required_positive_float(row: dict[str, Any], key: str, *, context: str) -> 
     if numeric_value <= 0:
         raise ValueError(f"{context}.{key} must be positive.")
     return numeric_value
+
+
+def _resolve_covariate_metadata(
+    source_config: dict[str, Any],
+    model_cfg: dict[str, Any],
+    *,
+    source_config_path: str,
+) -> tuple[bool, tuple[str, ...], int | None]:
+    data_cfg = source_config.get("data")
+    covariates_cfg = data_cfg.get("covariates") if isinstance(data_cfg, dict) else None
+    if not isinstance(covariates_cfg, dict) or not bool(covariates_cfg.get("enabled")):
+        return False, (), None
+
+    levels = covariates_cfg.get("levels")
+    if not isinstance(levels, list) or not levels:
+        raise ValueError(f"{source_config_path}.data.covariates.levels must be a non-empty list.")
+    covariate_levels = tuple(str(level).strip() for level in levels)
+    if any(not level for level in covariate_levels):
+        raise ValueError(f"{source_config_path}.data.covariates.levels must not contain blanks.")
+
+    return (
+        True,
+        covariate_levels,
+        _required_positive_int(
+            model_cfg,
+            "num_numeric_features",
+            context=f"{source_config_path}.model",
+        ),
+    )
 
 
 def _validate_model_type_matches_family(
