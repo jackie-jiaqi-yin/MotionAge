@@ -8,6 +8,7 @@ import yaml
 from motionage.config import (
     apply_overrides,
     load_yaml_config,
+    public_config_diff,
     public_config_snapshot,
     resolve_config,
     save_resolved_config,
@@ -191,6 +192,54 @@ def test_public_config_snapshot_preserves_non_path_profile_keys() -> None:
             "artifact_uri": "<redacted>",
         }
     }
+
+
+def test_public_config_diff_reports_only_public_reproducibility_changes() -> None:
+    reference = {
+        "experiment": {
+            "name": "mortality_cv_primary",
+            "output_dir": "local-runs/lstm",
+        },
+        "data": {
+            "source_file": "local-data/features.parquet",
+            "feature_columns": ["intensity_mean", "MIMS"],
+        },
+        "model": {
+            "type": "lstm_covariates_binary",
+            "hidden_size": 128,
+        },
+        "windowing": {"coverage_threshold": 0.5},
+    }
+    candidate = {
+        "experiment": {
+            "name": "mortality_cv_primary",
+            "output_dir": "local-runs/transformer",
+        },
+        "data": {
+            "source_file": "local-artifacts/approved_features.parquet",
+            "feature_columns": ["intensity_mean", "MIMS"],
+        },
+        "model": {
+            "type": "transformer_covariates_binary",
+            "hidden_size": 128,
+            "num_attention_heads": 4,
+        },
+        "windowing": {"coverage_threshold": 0.75},
+    }
+
+    diff = public_config_diff(reference, candidate)
+
+    assert diff == [
+        {"key": "model.num_attention_heads", "reference_value": None, "candidate_value": 4},
+        {
+            "key": "model.type",
+            "reference_value": "lstm_covariates_binary",
+            "candidate_value": "transformer_covariates_binary",
+        },
+        {"key": "windowing.coverage_threshold", "reference_value": 0.5, "candidate_value": 0.75},
+    ]
+    assert "local-runs" not in str(diff)
+    assert "local-artifacts" not in str(diff)
 
 
 def test_save_resolved_config_writes_yaml(tmp_path: Path) -> None:

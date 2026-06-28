@@ -79,6 +79,39 @@ def public_config_snapshot(
     return _redact_path_like_values(snapshot, redacted_value=redacted_value)
 
 
+def public_config_diff(
+    reference_config: dict[str, Any],
+    candidate_config: dict[str, Any],
+    *,
+    redact_paths: bool = True,
+) -> list[dict[str, Any]]:
+    """Return public-safe changed config leaves for report tables."""
+    reference_snapshot = public_config_snapshot(reference_config, redact_paths=redact_paths)
+    candidate_snapshot = public_config_snapshot(candidate_config, redact_paths=redact_paths)
+    reference_leaves = _flatten_config_leaves(reference_snapshot)
+    candidate_leaves = _flatten_config_leaves(candidate_snapshot)
+
+    rows: list[dict[str, Any]] = []
+    for key in sorted(set(reference_leaves) | set(candidate_leaves)):
+        if redact_paths and _is_path_like_config_path(key):
+            continue
+        reference_value = reference_leaves.get(key, _MISSING_CONFIG_VALUE)
+        candidate_value = candidate_leaves.get(key, _MISSING_CONFIG_VALUE)
+        if reference_value == candidate_value:
+            continue
+        rows.append(
+            {
+                "key": key,
+                "reference_value": _public_diff_value(reference_value),
+                "candidate_value": _public_diff_value(candidate_value),
+            }
+        )
+    return rows
+
+
+_MISSING_CONFIG_VALUE = object()
+
+
 def _resolve_leaf(full_key: str, node: dict[str, Any], trial: Any) -> Any:
     if trial is None or "search" not in node:
         return copy.deepcopy(node["default"])
@@ -136,6 +169,28 @@ def _redact_path_like_values(value: Any, *, redacted_value: str) -> Any:
     if isinstance(value, list):
         return [_redact_path_like_values(item, redacted_value=redacted_value) for item in value]
     return copy.deepcopy(value)
+
+
+def _flatten_config_leaves(value: Any, *, _prefix: str = "") -> dict[str, Any]:
+    if isinstance(value, dict):
+        if not value and _prefix:
+            return {_prefix: {}}
+        leaves: dict[str, Any] = {}
+        for key, nested in value.items():
+            nested_prefix = f"{_prefix}.{key}" if _prefix else str(key)
+            leaves.update(_flatten_config_leaves(nested, _prefix=nested_prefix))
+        return leaves
+    return {_prefix: copy.deepcopy(value)}
+
+
+def _public_diff_value(value: Any) -> Any:
+    if value is _MISSING_CONFIG_VALUE:
+        return None
+    return copy.deepcopy(value)
+
+
+def _is_path_like_config_path(key_path: str) -> bool:
+    return any(_is_path_like_config_key(part) for part in key_path.split("."))
 
 
 def _is_path_like_config_key(key: str) -> bool:

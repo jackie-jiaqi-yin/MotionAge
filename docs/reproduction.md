@@ -47,3 +47,8 @@ Use `motionage.config.public_config_snapshot` when showing resolved configs in
 reports, PR summaries, or reproduction notes. It preserves reproducibility knobs
 such as model, windowing, training, and mapping settings while redacting
 path-like values by default.
+
+Use `motionage.config.public_config_diff` when a robustness report needs to
+summarize how two resolved configs differ. The helper emits stable, flattened
+rows for public reproducibility settings and omits path-like keys such as local
+artifact files, output directories, and checkpoints.
