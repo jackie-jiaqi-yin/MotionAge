@@ -237,3 +237,26 @@ def test_load_artifact_manifest_rejects_absolute_paths(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="relative path"):
         load_artifact_manifest(manifest_path)
+
+
+def test_load_artifact_manifest_rejects_parent_directory_escape(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "bundle" / "manifest.yaml"
+    manifest_path.parent.mkdir()
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "artifacts": [
+                    {
+                        "id": "outside_bundle",
+                        "path": "../outside.csv",
+                        "description": "Escapes the artifact bundle root.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="stay inside the artifact bundle"):
+        load_artifact_manifest(manifest_path)

@@ -45,6 +45,10 @@ Every released artifact bundle should include:
 
 Users should place downloaded artifacts in a local `artifacts/` directory at the repository root. The directory is ignored by git.
 
+Manifest paths must be relative to the artifact bundle and must not use parent
+directory segments. The validator rejects absolute paths and `..` escapes so a
+public manifest cannot point at local files outside the approved bundle.
+
 ## Manifest Checks
 
 Optional artifact bundles can include a `manifest.yaml` file that is readable by

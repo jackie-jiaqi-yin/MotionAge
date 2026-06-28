@@ -145,6 +145,8 @@ def _artifact_spec_from_mapping(row: Any) -> ArtifactSpec:
     artifact_path = Path(str(raw_path))
     if artifact_path.is_absolute():
         raise ValueError(f"Artifact {artifact_id} must use a relative path.")
+    if ".." in artifact_path.parts:
+        raise ValueError(f"Artifact {artifact_id} path must stay inside the artifact bundle.")
 
     description = str(row.get("description", "")).strip()
     if not description:
