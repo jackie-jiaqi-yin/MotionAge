@@ -6,6 +6,7 @@ from motionage.training.evaluate import (
     aggregate_to_participant,
     align_meta_to_predictions,
     logits_to_probabilities,
+    prepare_validation_outputs,
     predict,
 )
 from motionage.training.freeze import (
@@ -85,6 +86,7 @@ __all__ = [
     "nan_validation_metrics",
     "optional_positive_int",
     "parse_freeze_schedule",
+    "prepare_validation_outputs",
     "predict",
     "resolve_device",
     "resolve_final_refit_config",

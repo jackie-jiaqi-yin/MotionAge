@@ -118,3 +118,55 @@ def test_logits_to_probabilities_clips_extreme_logits_to_finite_probabilities() 
     assert probabilities[0] > 0.0
     assert np.all(probabilities <= 1.0)
     assert np.all(probabilities >= 0.0)
+
+
+def test_prepare_validation_outputs_converts_binary_logits_before_aggregation() -> None:
+    assert hasattr(training, "prepare_validation_outputs")
+
+    prepared_preds, prepared_targets = training.prepare_validation_outputs(
+        predictions=np.array([0.0, np.log(3.0), -np.log(3.0)]),
+        targets=np.array([0.0, 0.0, 1.0]),
+        task_type=training.BINARY_CLASSIFICATION,
+        meta=pd.DataFrame({"id": [101, 101, 202]}),
+    )
+
+    np.testing.assert_allclose(prepared_preds, np.array([0.625, 0.25]))
+    np.testing.assert_allclose(prepared_targets, np.array([0.0, 1.0]))
+
+
+def test_prepare_validation_outputs_aggregates_regression_predictions_without_sigmoid() -> None:
+    assert hasattr(training, "prepare_validation_outputs")
+
+    prepared_preds, prepared_targets = training.prepare_validation_outputs(
+        predictions=np.array([10.0, 14.0, 20.0]),
+        targets=np.array([9.0, 9.0, 18.0]),
+        task_type=training.REGRESSION,
+        meta=pd.DataFrame({"id": [101, 101, 202]}),
+    )
+
+    np.testing.assert_allclose(prepared_preds, np.array([12.0, 20.0]))
+    np.testing.assert_allclose(prepared_targets, np.array([9.0, 18.0]))
+
+
+def test_prepare_validation_outputs_returns_flat_arrays_without_metadata() -> None:
+    assert hasattr(training, "prepare_validation_outputs")
+
+    prepared_preds, prepared_targets = training.prepare_validation_outputs(
+        predictions=np.array([[0.0], [np.log(3.0)]]),
+        targets=np.array([[0.0], [1.0]]),
+        task_type=training.BINARY_CLASSIFICATION,
+    )
+
+    np.testing.assert_allclose(prepared_preds, np.array([0.5, 0.75]))
+    np.testing.assert_allclose(prepared_targets, np.array([0.0, 1.0]))
+
+
+def test_prepare_validation_outputs_rejects_unknown_task_type() -> None:
+    assert hasattr(training, "prepare_validation_outputs")
+
+    with pytest.raises(ValueError, match="Unsupported task_type"):
+        training.prepare_validation_outputs(
+            predictions=np.array([1.0]),
+            targets=np.array([1.0]),
+            task_type="unsupported",
+        )
