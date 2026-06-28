@@ -15,12 +15,12 @@ venv/
 .env.*
 
 # Local data and generated outputs
-data/
-artifacts/
-experiments/
-outputs/
-logs/
-tmp/
+/data/
+/artifacts/
+/experiments/
+/outputs/
+/logs/
+/tmp/
 
 # Model and array artifacts
 *.pt
