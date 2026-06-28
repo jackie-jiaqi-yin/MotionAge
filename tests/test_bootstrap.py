@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from motionage.stats.bootstrap import (
     bootstrap_binary_auroc,
     public_bootstrap_interval_row,
     public_bootstrap_interval_table,
+    public_paired_auc_interval_table,
 )
 
 
@@ -155,6 +157,50 @@ def test_public_bootstrap_interval_table_normalizes_multiple_summaries() -> None
     ]
     assert "raw_resamples" not in table[0]
     assert "local_resample_path" not in table[1]
+
+
+def test_public_paired_auc_interval_table_summarizes_public_comparison_rows() -> None:
+    paired = pd.DataFrame(
+        {
+            "SEQN": [1, 2, 3, 4, 5, 6],
+            "fold": [0, 0, 0, 1, 1, 1],
+            "target": [0, 0, 1, 1, 0, 1],
+            "RIDAGEYR": [35, 45, 55, 65, 75, 85],
+            "score_left": [0.10, 0.20, 0.85, 0.75, 0.30, 0.90],
+            "score_right": [0.20, 0.70, 0.60, 0.65, 0.50, 0.80],
+        }
+    )
+
+    rows = public_paired_auc_interval_table(
+        paired,
+        left_label="MotionAge-FRC",
+        right_label="PhenoAge",
+        n_resamples=100,
+        random_seed=7,
+    )
+
+    assert [row["resampling_unit"] for row in rows] == [
+        "participant",
+        "participant_stratified",
+        "fold_stratified",
+    ]
+    assert rows[0]["estimate"] == pytest.approx(2 / 9)
+    assert rows[1]["estimate"] == pytest.approx(2 / 9)
+    assert rows[2]["estimate"] == pytest.approx(0.25)
+    for row in rows:
+        assert row["metric"] == "paired AUROC delta"
+        assert row["comparison"] == "MotionAge-FRC - PhenoAge"
+        assert row["left_label"] == "MotionAge-FRC"
+        assert row["right_label"] == "PhenoAge"
+        assert row["n"] == 6
+        assert row["events"] == 3
+        assert row["non_events"] == 3
+        assert row["ci_level"] == 0.95
+        assert row["n_resamples_requested"] == 100
+        assert 0 <= row["valid_resamples"] <= 100
+        assert "SEQN" not in row
+        assert "score_left" not in row
+        assert "score_right" not in row
 
 
 def test_bootstrap_binary_auroc_returns_observed_for_single_class_targets() -> None:

@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from numbers import Real
-from typing import Sequence
+from typing import Any, Sequence
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
+
+from motionage.stats.paired_auc import (
+    fold_structured_paired_bootstrap_auc_delta,
+    paired_auc_delta,
+    paired_bootstrap_auc_delta,
+)
 
 _ESTIMATE_KEYS = (
     "observed_auroc",
@@ -136,6 +142,98 @@ def public_bootstrap_interval_table(
     return rows
 
 
+def public_paired_auc_interval_table(
+    paired: Any,
+    *,
+    left_label: str,
+    right_label: str,
+    n_resamples: int,
+    random_seed: int,
+    comparison: str | None = None,
+    metric: str = "paired AUROC delta",
+    include_pooled: bool = True,
+    include_stratified: bool = True,
+    include_fold_structured: bool = True,
+) -> list[dict[str, str | float | int | bool]]:
+    """Return public-safe paired-AUROC interval rows from a paired score frame."""
+    comparison_label = comparison if comparison is not None else f"{left_label} - {right_label}"
+    observed = paired_auc_delta(paired)
+    rows: list[dict[str, str | float | int | bool]] = []
+
+    if include_pooled:
+        pooled = paired_bootstrap_auc_delta(
+            paired,
+            n_resamples=n_resamples,
+            random_seed=random_seed,
+            stratified=False,
+        )
+        rows.append(
+            _paired_auc_public_row(
+                {
+                    **pooled,
+                    "observed_auc_left": observed["auc_left"],
+                    "observed_auc_right": observed["auc_right"],
+                    "observed_auc_delta": observed["auc_delta"],
+                    "resampling_unit": "participant",
+                },
+                metric=metric,
+                comparison=comparison_label,
+                left_label=left_label,
+                right_label=right_label,
+                n=int(observed["n"]),
+                events=int(observed["events"]),
+                non_events=int(observed["non_events"]),
+            )
+        )
+
+    if include_stratified:
+        stratified = paired_bootstrap_auc_delta(
+            paired,
+            n_resamples=n_resamples,
+            random_seed=random_seed + 97,
+            stratified=True,
+        )
+        rows.append(
+            _paired_auc_public_row(
+                {
+                    **stratified,
+                    "observed_auc_left": observed["auc_left"],
+                    "observed_auc_right": observed["auc_right"],
+                    "observed_auc_delta": observed["auc_delta"],
+                    "resampling_unit": "participant_stratified",
+                },
+                metric=metric,
+                comparison=comparison_label,
+                left_label=left_label,
+                right_label=right_label,
+                n=int(observed["n"]),
+                events=int(observed["events"]),
+                non_events=int(observed["non_events"]),
+            )
+        )
+
+    if include_fold_structured:
+        fold_structured = fold_structured_paired_bootstrap_auc_delta(
+            paired,
+            n_resamples=n_resamples,
+            random_seed=random_seed + 194,
+        )
+        rows.append(
+            _paired_auc_public_row(
+                fold_structured,
+                metric=metric,
+                comparison=comparison_label,
+                left_label=left_label,
+                right_label=right_label,
+                n=int(observed["n"]),
+                events=int(observed["events"]),
+                non_events=int(observed["non_events"]),
+            )
+        )
+
+    return rows
+
+
 def _safe_observed_auroc(y_true: np.ndarray, y_prob: np.ndarray) -> float:
     unique_targets = np.unique(y_true)
     if unique_targets.size < 2:
@@ -180,3 +278,25 @@ def _integer(summary: Mapping[str, object], key: str) -> int:
     if not numeric.is_integer():
         raise ValueError(f"Bootstrap summary field {key!r} must be an integer.")
     return int(numeric)
+
+
+def _paired_auc_public_row(
+    summary: Mapping[str, object],
+    *,
+    metric: str,
+    comparison: str,
+    left_label: str,
+    right_label: str,
+    n: int,
+    events: int,
+    non_events: int,
+) -> dict[str, str | float | int | bool]:
+    row = public_bootstrap_interval_row(summary, metric=metric, comparison=comparison)
+    row["left_label"] = str(left_label)
+    row["right_label"] = str(right_label)
+    row["n"] = int(n)
+    row["events"] = int(events)
+    row["non_events"] = int(non_events)
+    row["observed_auc_left"] = _numeric(summary, "observed_auc_left")
+    row["observed_auc_right"] = _numeric(summary, "observed_auc_right")
+    return row
