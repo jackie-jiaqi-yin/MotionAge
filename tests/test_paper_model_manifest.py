@@ -111,6 +111,63 @@ def test_load_paper_study_manifest_records_public_study_metadata() -> None:
     assert study.official_feature_set == "motionage_accel"
 
 
+def test_load_motionage_analysis_template_records_public_mapping_metadata() -> None:
+    assert hasattr(motionage, "MotionAgeAnalysisTemplate")
+    assert hasattr(motionage, "load_motionage_analysis_template")
+
+    template = motionage.load_motionage_analysis_template(PAPER_CONFIG_DIR / "motionage_analysis.yaml")
+
+    assert template.analysis_name == "motionage_primary_60m"
+    assert template.output_dir == "outputs/motionage_primary_60m"
+    assert template.participant_predictions_dir == "outputs/mortality_cv_primary_60m"
+    assert template.id_column == "SEQN"
+    assert template.age_column == "RIDAGEYR"
+    assert template.sex_column == "RIAGENDR"
+    assert template.probability_column == "probability"
+    assert template.target_column == "mortstat"
+    assert template.probability_transform == "logit"
+    assert template.fit_partitions == ("train",)
+    assert template.strata == ("sex",)
+    assert template.clip_eps == 0.0001
+    assert template.weighted_fit is True
+    assert template.clamp_output_to_fit_age_range is False
+    assert template.min_stratum_participants == 100
+    assert template.outputs == {
+        "participant_scores": "outputs/motionage_primary_60m/participant_scores.csv",
+        "mapping_parameters": "outputs/motionage_primary_60m/mapping_parameters.csv",
+        "evaluation_tables": "outputs/motionage_primary_60m/evaluation_tables",
+    }
+
+
+def test_load_motionage_analysis_template_normalizes_partition_aliases(tmp_path: Path) -> None:
+    template_path = tmp_path / "motionage_analysis.yaml"
+    _write_yaml(
+        template_path,
+        _motionage_template(fit_partitions=["train", "val", "validation"]),
+    )
+
+    template = motionage.load_motionage_analysis_template(template_path)
+
+    assert template.fit_partitions == ("train", "validation")
+
+
+def test_load_motionage_analysis_template_rejects_private_absolute_paths(
+    tmp_path: Path,
+) -> None:
+    template_path = tmp_path / "motionage_analysis.yaml"
+    _write_yaml(
+        template_path,
+        _motionage_template(
+            analysis_overrides={
+                "output_dir": "/tmp/motionage",
+            }
+        ),
+    )
+
+    with pytest.raises(ValueError, match="analysis.output_dir must be repository-relative"):
+        motionage.load_motionage_analysis_template(template_path)
+
+
 def test_load_paper_manifest_readiness_counts_ready_and_not_ready_models() -> None:
     assert hasattr(motionage, "PaperManifestReadiness")
     assert hasattr(motionage, "load_paper_manifest_readiness")
@@ -138,7 +195,7 @@ def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     )
     _write_yaml(
         config_dir / "motionage_analysis.yaml",
-        {"analysis": {"name": "synthetic_motionage_analysis"}},
+        _motionage_template(),
     )
     manifest = config_dir / "manifest.yaml"
     _write_yaml(
@@ -317,7 +374,7 @@ def _write_manifest_with_models(
     config_dir.mkdir(parents=True)
     _write_yaml(
         config_dir / "motionage_analysis.yaml",
-        {"analysis": {"name": "synthetic_motionage_analysis"}},
+        _motionage_template(),
     )
     for family in {model["family"] for model in models}:
         _write_yaml(
@@ -342,6 +399,41 @@ def _default_study_metadata() -> dict[str, object]:
         "training_seed": 42,
         "analysis_template_path": "configs/paper/motionage_analysis.yaml",
         "official_feature_set": "motionage_accel",
+    }
+
+
+def _motionage_template(
+    *,
+    fit_partitions: list[str] | None = None,
+    analysis_overrides: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "analysis": {
+            "name": "synthetic_motionage_analysis",
+            "output_dir": "outputs/synthetic_motionage",
+            "participant_predictions_dir": "outputs/synthetic_predictions",
+            "id_column": "SEQN",
+            "age_column": "RIDAGEYR",
+            "sex_column": "RIAGENDR",
+            "probability_column": "probability",
+            "target_column": "mortstat",
+        }
+        | (analysis_overrides or {}),
+        "mapping": {
+            "probability_transform": "logit",
+            "age_bin_column": "age_bin",
+            "fit_partitions": fit_partitions or ["train"],
+            "strata": ["sex"],
+            "clip_eps": 0.0001,
+            "weighted_fit": True,
+            "clamp_output_to_fit_age_range": False,
+            "min_stratum_participants": 10,
+        },
+        "outputs": {
+            "participant_scores": "outputs/synthetic_motionage/participant_scores.csv",
+            "mapping_parameters": "outputs/synthetic_motionage/mapping_parameters.csv",
+            "evaluation_tables": "outputs/synthetic_motionage/evaluation_tables",
+        },
     }
 
 

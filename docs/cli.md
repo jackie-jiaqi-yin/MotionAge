@@ -41,4 +41,12 @@ JSON output includes a `public_boundary` block that declares the summary exclude
 
 JSON output also includes a `manifest_readiness` block with ready and not-ready aggregate counts. Markdown output includes the same information in a `Manifest Readiness` section.
 
+JSON output includes an `analysis_template` block with the public MotionAge
+mapping-template metadata from `configs/paper/motionage_analysis.yaml`: fit
+partitions, strata, clip epsilon, mapping outputs, and public column names.
+Markdown output includes the same information in a `MotionAge Analysis Template`
+section. The template validation checks configuration structure and
+repository-relative paths only; it does not require raw data, participant-level
+prediction files, or generated outputs to exist.
+
 Use `--markdown --summary-only` when preparing a compact reader-facing report, and omit `--summary-only` when inspecting per-model config metadata.

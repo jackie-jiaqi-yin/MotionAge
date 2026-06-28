@@ -13,10 +13,12 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from motionage.paper_manifest import (
+    MotionAgeAnalysisTemplate,
     PaperManifestReadiness,
     PaperModelManifestEntry,
     PaperStudyManifest,
     REQUIRED_PAPER_MODEL_FAMILIES,
+    load_motionage_analysis_template,
     load_paper_manifest_readiness,
     load_paper_study_manifest,
     validate_paper_model_manifest,
@@ -236,9 +238,11 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
     family_counts = Counter(entry.family for entry in output_entries)
     if args.emit_json:
         study = load_paper_study_manifest(args.manifest_path)
+        analysis_template = _load_study_analysis_template(args.manifest_path, study)
         payload = _paper_model_manifest_payload(
             args.manifest_path,
             study,
+            analysis_template,
             output_filters,
             validation_requirements,
             readiness,
@@ -249,8 +253,10 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
         study = load_paper_study_manifest(args.manifest_path)
+        analysis_template = _load_study_analysis_template(args.manifest_path, study)
         markdown = _paper_model_manifest_markdown(
             study,
+            analysis_template,
             output_filters,
             validation_requirements,
             readiness,
@@ -352,9 +358,25 @@ def _emit_output(output: str, output_path: Path | None) -> None:
     output_path.write_text(output, encoding="utf-8")
 
 
+def _load_study_analysis_template(
+    manifest_path: Path,
+    study: PaperStudyManifest,
+) -> MotionAgeAnalysisTemplate:
+    repo_root = _infer_manifest_repo_root(manifest_path)
+    return load_motionage_analysis_template(repo_root / study.analysis_template_path)
+
+
+def _infer_manifest_repo_root(manifest_path: Path) -> Path:
+    parts = manifest_path.parts
+    if len(parts) >= 3 and parts[-3:-1] == ("configs", "paper"):
+        return manifest_path.parents[2]
+    return manifest_path.parent
+
+
 def _paper_model_manifest_payload(
     manifest_path: Path,
     study: PaperStudyManifest,
+    analysis_template: MotionAgeAnalysisTemplate,
     output_filters: dict[str, list[str]],
     validation_requirements: dict[str, list[str]],
     readiness: PaperManifestReadiness,
@@ -366,6 +388,7 @@ def _paper_model_manifest_payload(
     payload: dict[str, object] = {
         "manifest_path": str(manifest_path),
         "study": asdict(study),
+        "analysis_template": asdict(analysis_template),
         "output_filters": output_filters,
         "validation_requirements": validation_requirements,
         "public_boundary": dict(PAPER_MODEL_PUBLIC_BOUNDARY),
@@ -385,6 +408,7 @@ def _paper_model_manifest_payload(
 
 def _paper_model_manifest_markdown(
     study: PaperStudyManifest,
+    analysis_template: MotionAgeAnalysisTemplate,
     output_filters: dict[str, list[str]],
     validation_requirements: dict[str, list[str]],
     readiness: PaperManifestReadiness,
@@ -395,6 +419,7 @@ def _paper_model_manifest_markdown(
     sections = [
         _paper_study_manifest_markdown(study),
         _paper_model_output_filters_markdown(output_filters),
+        _motionage_analysis_template_markdown(analysis_template),
         _paper_model_public_boundary_markdown(PAPER_MODEL_PUBLIC_BOUNDARY),
         _paper_model_validation_requirements_markdown(validation_requirements),
         _paper_manifest_readiness_markdown(readiness),
@@ -427,6 +452,29 @@ def _paper_model_output_filters_markdown(output_filters: dict[str, list[str]]) -
     for key in ("families", "model_ids"):
         values = ", ".join(output_filters[key]) if output_filters[key] else "-"
         lines.append(f"| {key} | {values} |")
+    return "\n".join(lines)
+
+
+def _motionage_analysis_template_markdown(template: MotionAgeAnalysisTemplate) -> str:
+    lines = [
+        "## MotionAge Analysis Template",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    payload = asdict(template)
+    outputs = payload.pop("outputs")
+    for field, value in payload.items():
+        if isinstance(value, (list, tuple)):
+            rendered = ", ".join(str(item) for item in value) if value else "-"
+        elif isinstance(value, bool):
+            rendered = str(value).lower()
+        else:
+            rendered = str(value)
+        lines.append(f"| {field} | {rendered} |")
+    assert isinstance(outputs, dict)
+    for key, value in outputs.items():
+        lines.append(f"| output:{key} | {value} |")
     return "\n".join(lines)
 
 

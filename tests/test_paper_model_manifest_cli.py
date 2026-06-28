@@ -46,6 +46,29 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "analysis_template_path": "configs/paper/motionage_analysis.yaml",
         "official_feature_set": "motionage_accel",
     }
+    assert payload["analysis_template"] == {
+        "analysis_name": "motionage_primary_60m",
+        "output_dir": "outputs/motionage_primary_60m",
+        "participant_predictions_dir": "outputs/mortality_cv_primary_60m",
+        "id_column": "SEQN",
+        "age_column": "RIDAGEYR",
+        "sex_column": "RIAGENDR",
+        "probability_column": "probability",
+        "target_column": "mortstat",
+        "probability_transform": "logit",
+        "age_bin_column": "age_bin",
+        "fit_partitions": ["train"],
+        "strata": ["sex"],
+        "clip_eps": 0.0001,
+        "weighted_fit": True,
+        "clamp_output_to_fit_age_range": False,
+        "min_stratum_participants": 100,
+        "outputs": {
+            "participant_scores": "outputs/motionage_primary_60m/participant_scores.csv",
+            "mapping_parameters": "outputs/motionage_primary_60m/mapping_parameters.csv",
+            "evaluation_tables": "outputs/motionage_primary_60m/evaluation_tables",
+        },
+    }
     assert payload["output_filters"] == {"families": [], "model_ids": []}
     assert payload["validation_requirements"] == {
         "required_families": ["gru", "lstm", "transformer"]
@@ -164,6 +187,11 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| n_folds | 5 |" in captured.out
     assert "| analysis_template_path | configs/paper/motionage_analysis.yaml |" in captured.out
     assert "| official_feature_set | motionage_accel |" in captured.out
+    assert "## MotionAge Analysis Template" in captured.out
+    assert "| analysis_name | motionage_primary_60m |" in captured.out
+    assert "| fit_partitions | train |" in captured.out
+    assert "| strata | sex |" in captured.out
+    assert "| output:participant_scores | outputs/motionage_primary_60m/participant_scores.csv |" in captured.out
     assert "## Public Boundary" in captured.out
     assert "| contains_raw_data | false |" in captured.out
     assert "| contains_participant_level_rows | false |" in captured.out
@@ -187,6 +215,9 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| covariates | enabled | 7 |" in captured.out
     assert "| covariate_level | 1 | 6 |" in captured.out
     assert captured.out.index("## Output Filters") < captured.out.index(
+        "## MotionAge Analysis Template"
+    )
+    assert captured.out.index("## MotionAge Analysis Template") < captured.out.index(
         "## Public Boundary"
     )
     assert captured.out.index("## Public Boundary") < captured.out.index(
@@ -607,7 +638,7 @@ def test_validate_paper_models_cli_returns_error_for_invalid_manifest(
     )
     _write_yaml(
         config_dir / "motionage_analysis.yaml",
-        {"analysis": {"name": "synthetic_motionage_analysis"}},
+        _motionage_template(),
     )
     manifest = config_dir / "manifest.yaml"
     _write_yaml(
@@ -928,5 +959,35 @@ def _source_config(model_type: str) -> dict[str, object]:
             "max_epochs": 80,
             "batch_size": 128,
             "learning_rate": 0.001,
+        },
+    }
+
+
+def _motionage_template() -> dict[str, object]:
+    return {
+        "analysis": {
+            "name": "synthetic_motionage_analysis",
+            "output_dir": "outputs/synthetic_motionage",
+            "participant_predictions_dir": "outputs/synthetic_predictions",
+            "id_column": "SEQN",
+            "age_column": "RIDAGEYR",
+            "sex_column": "RIAGENDR",
+            "probability_column": "probability",
+            "target_column": "mortstat",
+        },
+        "mapping": {
+            "probability_transform": "logit",
+            "age_bin_column": "age_bin",
+            "fit_partitions": ["train"],
+            "strata": ["sex"],
+            "clip_eps": 0.0001,
+            "weighted_fit": True,
+            "clamp_output_to_fit_age_range": False,
+            "min_stratum_participants": 10,
+        },
+        "outputs": {
+            "participant_scores": "outputs/synthetic_motionage/participant_scores.csv",
+            "mapping_parameters": "outputs/synthetic_motionage/mapping_parameters.csv",
+            "evaluation_tables": "outputs/synthetic_motionage/evaluation_tables",
         },
     }

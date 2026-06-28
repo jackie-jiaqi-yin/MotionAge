@@ -71,6 +71,92 @@ class PaperManifestReadiness:
     all_models_ready: bool
 
 
+@dataclass(frozen=True)
+class MotionAgeAnalysisTemplate:
+    """Public metadata resolved from the MotionAge analysis template."""
+
+    analysis_name: str
+    output_dir: str
+    participant_predictions_dir: str
+    id_column: str
+    age_column: str
+    sex_column: str
+    probability_column: str
+    target_column: str
+    probability_transform: str
+    age_bin_column: str
+    fit_partitions: tuple[str, ...]
+    strata: tuple[str, ...]
+    clip_eps: float
+    weighted_fit: bool
+    clamp_output_to_fit_age_range: bool
+    min_stratum_participants: int
+    outputs: dict[str, str]
+
+
+def load_motionage_analysis_template(template_path: str | Path) -> MotionAgeAnalysisTemplate:
+    """Load public metadata from a MotionAge analysis template."""
+    path = Path(template_path)
+    template = _load_yaml(path)
+    analysis = _required_mapping(template, "analysis", context="MotionAge analysis template")
+    mapping = _required_mapping(template, "mapping", context="MotionAge analysis template")
+    outputs = _required_mapping(template, "outputs", context="MotionAge analysis template")
+
+    output_dir = _required_relative_path_text(analysis, "output_dir", context="analysis")
+    participant_predictions_dir = _required_relative_path_text(
+        analysis,
+        "participant_predictions_dir",
+        context="analysis",
+    )
+    resolved_outputs = {
+        key: _required_relative_path_text(outputs, key, context="outputs")
+        for key in ("participant_scores", "mapping_parameters", "evaluation_tables")
+    }
+    fit_partitions = _normalize_template_partitions(
+        _required_list(mapping, "fit_partitions", context="mapping")
+    )
+    strata = _required_text_tuple(mapping, "strata", context="mapping")
+    probability_transform = _required_text(
+        mapping,
+        "probability_transform",
+        context="mapping",
+    ).lower()
+    if probability_transform != "logit":
+        raise ValueError("mapping.probability_transform must be logit.")
+
+    clip_eps = _required_positive_float(mapping, "clip_eps", context="mapping")
+    if clip_eps >= 0.5:
+        raise ValueError("mapping.clip_eps must be between 0 and 0.5.")
+
+    return MotionAgeAnalysisTemplate(
+        analysis_name=_required_text(analysis, "name", context="analysis"),
+        output_dir=output_dir,
+        participant_predictions_dir=participant_predictions_dir,
+        id_column=_required_text(analysis, "id_column", context="analysis"),
+        age_column=_required_text(analysis, "age_column", context="analysis"),
+        sex_column=_required_text(analysis, "sex_column", context="analysis"),
+        probability_column=_required_text(analysis, "probability_column", context="analysis"),
+        target_column=_required_text(analysis, "target_column", context="analysis"),
+        probability_transform=probability_transform,
+        age_bin_column=_required_text(mapping, "age_bin_column", context="mapping"),
+        fit_partitions=fit_partitions,
+        strata=strata,
+        clip_eps=clip_eps,
+        weighted_fit=_required_bool(mapping, "weighted_fit", context="mapping"),
+        clamp_output_to_fit_age_range=_required_bool(
+            mapping,
+            "clamp_output_to_fit_age_range",
+            context="mapping",
+        ),
+        min_stratum_participants=_required_positive_int(
+            mapping,
+            "min_stratum_participants",
+            context="mapping",
+        ),
+        outputs=resolved_outputs,
+    )
+
+
 def load_paper_study_manifest(manifest_path: str | Path) -> PaperStudyManifest:
     """Load and validate public study metadata from a paper manifest."""
     path = Path(manifest_path)
@@ -85,7 +171,11 @@ def load_paper_study_manifest(manifest_path: str | Path) -> PaperStudyManifest:
         "analysis_template_path",
         context="study",
     )
-    _resolve_study_analysis_template_path(analysis_template_path, repo_root=repo_root)
+    resolved_analysis_template_path = _resolve_study_analysis_template_path(
+        analysis_template_path,
+        repo_root=repo_root,
+    )
+    load_motionage_analysis_template(resolved_analysis_template_path)
 
     return PaperStudyManifest(
         study_id=_required_text(study, "study_id", context="study"),
@@ -259,6 +349,13 @@ def _manifest_list(manifest: dict[str, Any], key: str, *, required: bool) -> lis
     return value
 
 
+def _required_mapping(row: dict[str, Any], key: str, *, context: str) -> dict[str, Any]:
+    value = row.get(key)
+    if not isinstance(value, dict):
+        raise ValueError(f"{context} must define a {key} mapping.")
+    return value
+
+
 def _infer_repo_root(manifest_path: Path) -> Path:
     parts = manifest_path.parts
     if len(parts) >= 3 and parts[-3:-1] == ("configs", "paper"):
@@ -295,6 +392,35 @@ def _required_text(row: dict[str, Any], key: str, *, context: str) -> str:
     return str(value).strip()
 
 
+def _required_relative_path_text(row: dict[str, Any], key: str, *, context: str) -> str:
+    value = _required_text(row, key, context=context)
+    if Path(value).is_absolute():
+        raise ValueError(f"{context}.{key} must be repository-relative: {value}")
+    return value
+
+
+def _required_list(row: dict[str, Any], key: str, *, context: str) -> list[Any]:
+    value = row.get(key)
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{context}.{key} must be a non-empty list.")
+    return value
+
+
+def _required_text_tuple(row: dict[str, Any], key: str, *, context: str) -> tuple[str, ...]:
+    values = _required_list(row, key, context=context)
+    normalized = tuple(str(value).strip() for value in values)
+    if any(not value for value in normalized):
+        raise ValueError(f"{context}.{key} must not contain blanks.")
+    return normalized
+
+
+def _required_bool(row: dict[str, Any], key: str, *, context: str) -> bool:
+    value = row.get(key)
+    if not isinstance(value, bool):
+        raise ValueError(f"{context}.{key} must be a boolean.")
+    return value
+
+
 def _required_int(row: dict[str, Any], key: str, *, context: str) -> int:
     value = row.get(key)
     if not isinstance(value, int) or isinstance(value, bool):
@@ -317,6 +443,21 @@ def _required_positive_float(row: dict[str, Any], key: str, *, context: str) -> 
     if numeric_value <= 0:
         raise ValueError(f"{context}.{key} must be positive.")
     return numeric_value
+
+
+def _normalize_template_partitions(partitions: list[Any]) -> tuple[str, ...]:
+    aliases = {"train": "train", "val": "validation", "validation": "validation", "test": "test"}
+    normalized: list[str] = []
+    for partition in partitions:
+        key = str(partition).strip().lower()
+        if key not in aliases:
+            raise ValueError(f"Unsupported mapping.fit_partitions value: {partition!r}")
+        canonical = aliases[key]
+        if canonical not in normalized:
+            normalized.append(canonical)
+    if not normalized:
+        raise ValueError("mapping.fit_partitions must contain at least one partition.")
+    return tuple(normalized)
 
 
 def _resolve_covariate_metadata(
