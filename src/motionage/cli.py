@@ -7,6 +7,7 @@ import json
 import sys
 from collections import Counter
 from dataclasses import asdict
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -40,6 +41,11 @@ def validate_paper_models_main(argv: Sequence[str] | None = None) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="motionage")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"motionage {_package_version()}",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     _build_validate_paper_models_parser(
@@ -60,6 +66,11 @@ def _build_validate_paper_models_parser(
     parser = parser or argparse.ArgumentParser(
         prog=prog,
         description="Validate paper model manifest coverage and source config consistency.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"motionage {_package_version()}",
     )
     parser.add_argument("manifest_path", type=Path)
     parser.add_argument(
@@ -109,6 +120,13 @@ def _build_validate_paper_models_parser(
         help="write the selected output to a file instead of stdout",
     )
     return parser
+
+
+def _package_version() -> str:
+    try:
+        return version("motionage")
+    except PackageNotFoundError:
+        return "0+unknown"
 
 
 def _validate_paper_models(args: argparse.Namespace) -> int:

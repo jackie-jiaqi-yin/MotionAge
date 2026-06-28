@@ -42,6 +42,13 @@ Install dependencies:
 uv sync --extra test
 ```
 
+Record the installed package version for reproduction logs:
+
+```bash
+uv run motionage --version
+uv run motionage-validate-paper-models --version
+```
+
 Run the current smoke checks:
 
 ```bash

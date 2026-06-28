@@ -665,6 +665,40 @@ def test_motionage_console_script_validate_paper_models_summary_only_json() -> N
     assert "models" not in payload
 
 
+def test_motionage_console_script_reports_version() -> None:
+    import subprocess
+
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    result = subprocess.run(
+        ["uv", "run", "motionage", "--version"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == f"motionage {pyproject['project']['version']}\n"
+    assert result.stderr == ""
+
+
+def test_validate_paper_models_console_script_reports_version() -> None:
+    import subprocess
+
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    result = subprocess.run(
+        ["uv", "run", "motionage-validate-paper-models", "--version"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == f"motionage {pyproject['project']['version']}\n"
+    assert result.stderr == ""
+
+
 def test_validate_paper_models_console_script_summary_only_json_output_file(
     tmp_path: Path,
 ) -> None:

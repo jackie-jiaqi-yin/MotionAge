@@ -8,6 +8,8 @@ Purpose: verify that the package imports, CI environment, and paper-visible mode
 
 ```bash
 uv sync --extra test
+uv run motionage --version
+uv run motionage-validate-paper-models --version
 uv run python -m compileall src
 uv run pytest
 ```
