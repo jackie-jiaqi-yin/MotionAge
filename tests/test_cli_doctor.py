@@ -48,3 +48,49 @@ def test_motionage_doctor_reports_json_environment() -> None:
     for version in payload["dependencies"].values():
         assert isinstance(version, str)
         assert version
+
+
+def test_motionage_doctor_can_write_text_output_file(tmp_path: Path) -> None:
+    output_path = tmp_path / "reports" / "doctor.txt"
+
+    result = subprocess.run(
+        ["uv", "run", "motionage", "doctor", "--output", str(output_path)],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    report = output_path.read_text(encoding="utf-8")
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert report.startswith("MotionAge environment report\n")
+    assert "dependencies:\n" in report
+    assert report.endswith("\n")
+
+
+def test_motionage_doctor_can_write_json_output_file(tmp_path: Path) -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    output_path = tmp_path / "reports" / "doctor.json"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage",
+            "doctor",
+            "--json",
+            "--output",
+            str(output_path),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert payload["motionage"] == pyproject["project"]["version"]
+    assert set(payload["dependencies"]) == set(DOCTOR_DEPENDENCIES)

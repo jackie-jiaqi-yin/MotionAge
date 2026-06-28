@@ -54,6 +54,7 @@ Capture a compact environment report:
 ```bash
 uv run motionage doctor
 uv run motionage doctor --json
+uv run motionage doctor --json --output reports/doctor.json
 ```
 
 Run the current smoke checks:

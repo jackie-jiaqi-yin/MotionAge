@@ -70,6 +70,13 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="emit_json",
         help="emit the environment report as JSON",
     )
+    doctor_parser.add_argument(
+        "--output",
+        type=Path,
+        dest="output_path",
+        default=None,
+        help="write the environment report to a file instead of stdout",
+    )
     return parser
 
 
@@ -147,9 +154,14 @@ def _package_version() -> str:
 def _doctor(args: argparse.Namespace) -> int:
     payload = _doctor_payload()
     if args.emit_json:
-        print(json.dumps(payload, indent=2))
+        output = f"{json.dumps(payload, indent=2)}\n"
     else:
-        print(_doctor_text(payload))
+        output = f"{_doctor_text(payload)}\n"
+    try:
+        _emit_output(output, args.output_path)
+    except OSError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
