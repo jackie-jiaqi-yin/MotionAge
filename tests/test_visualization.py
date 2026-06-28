@@ -350,6 +350,48 @@ def test_build_public_motionage_mapping_frame_keeps_only_aggregate_plot_fields()
     assert "row_ids" not in public_frame.columns
 
 
+def test_build_public_motionage_mapping_frame_requires_known_sex_labels() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "sex_value": 9,
+                "age_bin": 65,
+                "representative_probability": 0.042,
+                "fitted_probability": 0.045,
+                "logit_probability": -3.13,
+                "fitted_logit_probability": -3.05,
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Missing public sex labels"):
+        build_public_motionage_mapping_frame(frame)
+
+
+def test_build_public_motionage_mapping_frame_allows_explicit_public_sex_labels() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "sex_value": 9,
+                "age_bin": 65,
+                "representative_probability": 0.042,
+                "fitted_probability": 0.045,
+                "logit_probability": -3.13,
+                "fitted_logit_probability": -3.05,
+            }
+        ]
+    )
+
+    public_frame = build_public_motionage_mapping_frame(
+        frame,
+        sex_labels={9: "Other"},
+    )
+
+    assert public_frame[["sex_value", "sex_label"]].to_dict("records") == [
+        {"sex_value": 9, "sex_label": "Other"}
+    ]
+
+
 def test_plot_motionage_mapping_diagnostics_uses_age_bin_summary_inputs() -> None:
     public_frame = build_public_motionage_mapping_frame(
         pd.DataFrame(

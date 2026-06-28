@@ -235,6 +235,7 @@ def build_public_motionage_mapping_frame(
     fitted_logit_col: str = "fitted_logit_probability",
     count_col: str | None = "n_participants",
     sex_labels: Optional[dict[Any, str]] = None,
+    require_public_sex_labels: bool = True,
 ) -> pd.DataFrame:
     """Return an allowlisted aggregate MotionAge mapping diagnostics frame."""
     required = [
@@ -274,7 +275,11 @@ def build_public_motionage_mapping_frame(
         {
             "sex_value": data[sex_col],
             "sex_label": data[sex_col].map(
-                lambda value: _motionage_sex_label(value, sex_labels=label_lookup)
+                lambda value: _motionage_sex_label(
+                    value,
+                    sex_labels=label_lookup,
+                    required=require_public_sex_labels,
+                )
             ),
             "age_bin": _coerce_finite_numeric(
                 data,
@@ -721,8 +726,8 @@ def _ordered_motionage_sexes(values: pd.Series) -> list[Any]:
     return sorted(
         values.drop_duplicates().tolist(),
         key=lambda value: (
-            _motionage_sex_label(value) != "Female",
-            _motionage_sex_label(value),
+            _motionage_sex_label(value, required=False) != "Female",
+            _motionage_sex_label(value, required=False),
         ),
     )
 
@@ -731,9 +736,12 @@ def _motionage_sex_label(
     value: Any,
     *,
     sex_labels: Optional[dict[Any, str]] = None,
+    required: bool = False,
 ) -> str:
     labels = DEFAULT_MAPPING_SEX_LABELS if sex_labels is None else sex_labels
     label = labels.get(value)
     if label is not None:
         return label
+    if required:
+        raise ValueError(f"Missing public sex labels for value: {value}")
     return str(value)

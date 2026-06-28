@@ -41,3 +41,5 @@ plots when report artifacts include extra internal columns. It keeps only
 aggregate age-bin mapping diagnostics, sex labels, representative/fitted
 probabilities, logits, and optional aggregate counts, excluding source paths,
 raw row references, split identifiers, and participant-level records.
+The mapping frame requires sex values to resolve through default or explicit
+public labels before they can appear in figure inputs.
