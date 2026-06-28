@@ -74,6 +74,8 @@ def load_paper_model_manifest(
             )
         )
 
+    _reject_duplicate_entry_values(entries, field_name="model_id")
+    _reject_duplicate_entry_values(entries, field_name="source_config_path")
     return tuple(entries)
 
 
@@ -140,3 +142,18 @@ def _validate_model_type_matches_family(
             f"{source_config_path} family '{family}' does not match "
             f"source model.type '{source_model_type}'."
         )
+
+
+def _reject_duplicate_entry_values(
+    entries: Sequence[PaperModelManifestEntry],
+    *,
+    field_name: str,
+) -> None:
+    counts: dict[str, int] = {}
+    for entry in entries:
+        value = str(getattr(entry, field_name))
+        counts[value] = counts.get(value, 0) + 1
+
+    duplicates = sorted(value for value, count in counts.items() if count > 1)
+    if duplicates:
+        raise ValueError(f"Duplicate paper {field_name} values: {duplicates}")
