@@ -104,6 +104,35 @@ def test_initialize_model_from_config_noops_without_checkpoint() -> None:
     assert summary == InitializationSummary(applied=False)
 
 
+def test_initialization_summary_report_row_omits_checkpoint_path_by_default() -> None:
+    summary = InitializationSummary(
+        applied=True,
+        checkpoint_path="local-checkpoints/lstm_fold0.pt",
+        source_tensor_count=10,
+        target_tensor_count=12,
+        loaded_tensor_count=8,
+        loaded_param_count=12345,
+        untouched_target_count=4,
+        skipped_missing_count=1,
+        skipped_shape_count=1,
+    )
+
+    report_row = summary.to_report_row()
+
+    assert report_row == {
+        "applied": True,
+        "source_tensor_count": 10,
+        "target_tensor_count": 12,
+        "loaded_tensor_count": 8,
+        "loaded_param_count": 12345,
+        "loaded_tensor_fraction": 0.8,
+        "untouched_target_count": 4,
+        "skipped_missing_count": 1,
+        "skipped_shape_count": 1,
+    }
+    assert "checkpoint_path" not in report_row
+
+
 def test_initialize_model_from_config_raises_for_missing_checkpoint(tmp_path: Path) -> None:
     model = build_model(_recurrent_config("gru_binary"))
 

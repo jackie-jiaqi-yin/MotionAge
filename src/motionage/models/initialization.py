@@ -24,6 +24,28 @@ class InitializationSummary:
     skipped_missing_count: int = 0
     skipped_shape_count: int = 0
 
+    def to_report_row(self, *, include_checkpoint_path: bool = False) -> dict[str, object]:
+        """Return a public-safe aggregate initialization report row."""
+        loaded_fraction = (
+            self.loaded_tensor_count / self.source_tensor_count
+            if self.source_tensor_count
+            else 0.0
+        )
+        row: dict[str, object] = {
+            "applied": self.applied,
+            "source_tensor_count": self.source_tensor_count,
+            "target_tensor_count": self.target_tensor_count,
+            "loaded_tensor_count": self.loaded_tensor_count,
+            "loaded_param_count": self.loaded_param_count,
+            "loaded_tensor_fraction": loaded_fraction,
+            "untouched_target_count": self.untouched_target_count,
+            "skipped_missing_count": self.skipped_missing_count,
+            "skipped_shape_count": self.skipped_shape_count,
+        }
+        if include_checkpoint_path:
+            row["checkpoint_path"] = self.checkpoint_path
+        return row
+
 
 def initialize_model_from_config(
     model: nn.Module,

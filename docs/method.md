@@ -12,6 +12,14 @@ The first-stage model predicts fixed-horizon mortality from minute-level acceler
 
 Covariate variants include late-fusion and residual-fusion designs. These implementations will be added in dedicated model PRs.
 
+## Model Initialization
+
+Checkpoint initialization can be used to warm-start paper-visible GRU, LSTM,
+and Transformer variants when reproducing experiments locally. Public reports
+should summarize initialization with aggregate compatibility counts and loaded
+tensor fractions, while omitting checkpoint paths, weights, and private run
+state by default.
+
 ## MotionAge Mapping
 
 For participant `i` and window `t`, let `z_it` be the first-stage mortality logit.
