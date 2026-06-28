@@ -79,6 +79,13 @@ def _build_validate_paper_models_parser(
         dest="emit_markdown",
         help="emit a Markdown table of resolved paper model configs",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        dest="output_path",
+        default=None,
+        help="write the selected output to a file instead of stdout",
+    )
     return parser
 
 
@@ -96,16 +103,38 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
     family_counts = Counter(entry.family for entry in entries)
     if args.emit_json:
         payload = _paper_model_manifest_payload(args.manifest_path, entries, family_counts)
-        print(json.dumps(payload, indent=2))
-        return 0
-    if args.emit_markdown:
-        print(_paper_model_manifest_markdown(entries))
-        return 0
+        output = f"{json.dumps(payload, indent=2)}\n"
+    elif args.emit_markdown:
+        output = f"{_paper_model_manifest_markdown(entries)}\n"
+    else:
+        output = _paper_model_manifest_text(args.manifest_path, entries, family_counts)
 
-    print(f"Validated {len(entries)} paper model configs from {args.manifest_path}.")
-    for family in sorted(family_counts):
-        print(f"{family}: {family_counts[family]}")
+    try:
+        _emit_output(output, args.output_path)
+    except OSError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     return 0
+
+
+def _paper_model_manifest_text(
+    manifest_path: Path,
+    entries: Sequence[PaperModelManifestEntry],
+    family_counts: Counter[str],
+) -> str:
+    lines = [f"Validated {len(entries)} paper model configs from {manifest_path}."]
+    for family in sorted(family_counts):
+        lines.append(f"{family}: {family_counts[family]}")
+    return "\n".join(lines) + "\n"
+
+
+def _emit_output(output: str, output_path: Path | None) -> None:
+    if output_path is None:
+        print(output, end="")
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(output, encoding="utf-8")
 
 
 def _paper_model_manifest_payload(

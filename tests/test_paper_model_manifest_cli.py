@@ -84,6 +84,85 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     )
 
 
+def test_validate_paper_models_cli_can_write_text_output_file(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    output_path = tmp_path / "reports" / "manifest.txt"
+
+    status = validate_paper_models_main(
+        [
+            "--output",
+            str(output_path),
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 0
+    assert captured.out == ""
+    assert captured.err == ""
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        f"Validated 10 paper model configs from {PAPER_CONFIG_DIR / 'mortality_cv_primary_60m.yaml'}.",
+        "gru: 4",
+        "lstm: 3",
+        "transformer: 3",
+    ]
+
+
+def test_validate_paper_models_cli_can_write_json_output_file(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    output_path = tmp_path / "manifest.json"
+
+    status = validate_paper_models_main(
+        [
+            "--json",
+            "--output",
+            str(output_path),
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert status == 0
+    assert captured.out == ""
+    assert captured.err == ""
+    assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
+
+
+def test_validate_paper_models_cli_can_write_markdown_output_file(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    output_path = tmp_path / "reports" / "manifest.md"
+
+    status = validate_paper_models_main(
+        [
+            "--markdown",
+            "--output",
+            str(output_path),
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    markdown = output_path.read_text(encoding="utf-8")
+    assert status == 0
+    assert captured.out == ""
+    assert captured.err == ""
+    assert markdown.startswith("| Family | Model ID | Model type | Prediction mode | Source config |\n")
+    assert "lstm_level1_residual" in markdown
+
+
 def test_validate_paper_models_cli_returns_error_for_invalid_manifest(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -169,6 +248,34 @@ def test_validate_paper_models_console_script_markdown_output() -> None:
 
     assert result.stdout.startswith("| Family | Model ID | Model type | Prediction mode | Source config |")
     assert "transformer_level1_residual" in result.stdout
+
+
+def test_validate_paper_models_console_script_output_file(tmp_path: Path) -> None:
+    import subprocess
+
+    output_path = tmp_path / "manifest.json"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage-validate-paper-models",
+            "--json",
+            "--output",
+            str(output_path),
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert payload["model_count"] == 10
+    assert payload["family_counts"]["transformer"] == 3
 
 
 def _write_yaml(path: Path, payload: object) -> None:
