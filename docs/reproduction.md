@@ -29,6 +29,9 @@ Training summaries should use public aggregate report rows that indicate whether
 the fit was validation-selected or fixed-epoch without validation. Do not include
 checkpoint paths, model weights, private run directories, or per-epoch logs in
 publication-facing summaries.
+When summaries include paper-visible model families such as GRU, LSTM, or
+Transformer, provide reader-facing model labels so exported training rows avoid
+internal model ids.
 Use `motionage.training.build_public_fixed_epoch_plan_summary` before a
 fixed-epoch refit when a manifest needs the planned epoch budget, resume offset,
 remaining epochs, and final-refit strategy without exposing checkpoint paths,

@@ -136,6 +136,51 @@ def test_build_public_training_report_row_omits_private_run_fields() -> None:
     assert "training_log" not in report_row
 
 
+def test_build_public_training_report_row_emits_public_model_labels() -> None:
+    assert hasattr(training, "build_public_training_report_row")
+
+    summary = training.build_fixed_epoch_training_summary(
+        task_type=training.BINARY_CLASSIFICATION,
+        selection_metric_name="auroc",
+        selection_metric_direction="maximize",
+        best_val_metric=float("nan"),
+        best_val_loss=float("nan"),
+        best_epoch=12,
+        epochs_trained=12,
+        best_eval_metrics={},
+        fixed_epochs=12,
+        start_epoch=1,
+        resumed_from_epoch=0,
+    )
+    summary["model_id"] = "lstm_level1_latefusion"
+    summary["model_family"] = "lstm"
+
+    report_row = training.build_public_training_report_row(
+        summary,
+        model_labels={"lstm_level1_latefusion": "LSTM MotionAge-FRC"},
+    )
+
+    assert report_row["model"] == "LSTM MotionAge-FRC"
+    assert report_row["model_family"] == "LSTM"
+    assert "model_id" not in report_row
+
+
+def test_build_public_training_report_row_requires_public_model_labels() -> None:
+    assert hasattr(training, "build_public_training_report_row")
+
+    with pytest.raises(ValueError, match="Missing public model labels"):
+        training.build_public_training_report_row(
+            {
+                "task_type": training.BINARY_CLASSIFICATION,
+                "fit_mode": "fixed_epochs_no_validation",
+                "selection_metric_name": "auroc",
+                "selection_metric_direction": "maximize",
+                "model_id": "transformer_level1_latefusion",
+                "model_family": "transformer",
+            }
+        )
+
+
 def test_training_summary_rejects_unknown_task_type() -> None:
     assert hasattr(training, "build_training_summary")
 
