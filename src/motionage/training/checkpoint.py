@@ -59,3 +59,42 @@ def build_checkpoint_payload(
             }
         )
     return payload
+
+
+def build_checkpoint_resume_state(
+    checkpoint: dict[str, Any],
+    *,
+    task_type: str,
+) -> dict[str, Any]:
+    """Extract trainer resume metadata from a checkpoint payload."""
+    state: dict[str, Any] = {
+        "resumed_from_epoch": int(checkpoint.get("epoch", 0)),
+        "best_val_metric": float(checkpoint.get("best_val_metric", float("nan"))),
+        "best_val_loss": float(checkpoint.get("best_val_loss", float("nan"))),
+        "best_eval_metrics": dict(checkpoint.get("best_eval_metrics", {})),
+        "best_epoch": int(checkpoint.get("best_epoch", 0)),
+        "patience_counter": int(checkpoint.get("patience_counter", 0)),
+        "training_log": [dict(row) for row in checkpoint.get("training_log", [])],
+    }
+
+    if task_type == REGRESSION:
+        state.update(
+            {
+                "best_val_mae": float(checkpoint.get("val_mae", float("nan"))),
+                "best_val_r2": float(checkpoint.get("val_r2", float("nan"))),
+            }
+        )
+        return state
+
+    if task_type == BINARY_CLASSIFICATION:
+        state.update(
+            {
+                "best_val_auroc": float(checkpoint.get("val_auroc", float("nan"))),
+                "best_val_auprc": float(checkpoint.get("val_auprc", float("nan"))),
+                "best_val_logloss": float(checkpoint.get("val_logloss", float("nan"))),
+                "best_val_brier": float(checkpoint.get("val_brier", float("nan"))),
+            }
+        )
+        return state
+
+    raise ValueError(f"Unsupported task_type '{task_type}'.")
