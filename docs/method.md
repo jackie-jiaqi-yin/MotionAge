@@ -35,6 +35,10 @@ Secondary evaluation compares chronological age, benchmark biological-age measur
 - paired confidence intervals,
 - robustness and sensitivity analyses.
 
+Binary evaluation summaries should include aggregate split context only:
+`n`, `events`, `non_events`, and `event_rate`. These counts make metrics
+auditable without exposing participant rows or split ID files.
+
 ## Leakage Controls
 
 All preprocessing that learns parameters from data should fit on training partitions only. This includes covariate imputation, scaling, categorical encoding, MotionAge mapping, and secondary classifiers.

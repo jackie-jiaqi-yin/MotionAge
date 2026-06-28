@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
 
+import motionage.evaluation.metrics as motionage_metrics
 from motionage.evaluation.metrics import (
     binary_precision_recall_curve_rows,
     binary_probability_metrics,
@@ -15,6 +17,31 @@ from motionage.evaluation.metrics import (
     logits_to_probabilities,
     select_binary_threshold,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_method_docs_describe_aggregate_binary_evaluation_counts() -> None:
+    method_doc = (REPO_ROOT / "docs" / "method.md").read_text(encoding="utf-8")
+
+    for term in ("n", "events", "non_events", "event_rate"):
+        assert term in method_doc
+
+
+def test_binary_target_summary_reports_aggregate_counts_after_filtering() -> None:
+    assert hasattr(motionage_metrics, "binary_target_summary")
+
+    summary = motionage_metrics.binary_target_summary(
+        np.asarray([0, 1, 1, np.nan]),
+        np.asarray([0.1, 0.9, np.nan, 0.4]),
+    )
+
+    assert summary == {
+        "n": 2,
+        "events": 1,
+        "non_events": 1,
+        "event_rate": 0.5,
+    }
 
 
 def test_logits_to_probabilities_is_stable_for_extreme_logits() -> None:
@@ -33,6 +60,10 @@ def test_binary_probability_metrics_filters_invalid_rows_and_reports_fallbacks()
 
     assert metrics["auroc"] == pytest.approx(1.0)
     assert metrics["auprc"] == pytest.approx(1.0)
+    assert metrics["n"] == 2
+    assert metrics["events"] == 1
+    assert metrics["non_events"] == 1
+    assert metrics["event_rate"] == pytest.approx(0.5)
     assert metrics["positive_rate"] == pytest.approx(0.5)
     assert metrics["logloss"] > 0.0
     assert metrics["brier"] > 0.0

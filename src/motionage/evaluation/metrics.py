@@ -31,10 +31,11 @@ def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-logits_arr))
 
 
-def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float]:
+def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
     """Return threshold-free binary-classification metrics."""
     y_true_arr, y_prob_arr = _prepare_binary_inputs(y_true, y_prob)
-    positive_rate = float(np.mean(y_true_arr))
+    target_summary = binary_target_summary(y_true_arr, y_prob_arr)
+    positive_rate = target_summary["event_rate"]
 
     if np.unique(y_true_arr).size >= 2:
         auroc = float(roc_auc_score(y_true_arr, y_prob_arr))
@@ -44,11 +45,25 @@ def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[s
         auprc = positive_rate
 
     return {
+        **target_summary,
         "auroc": auroc,
         "auprc": auprc,
         "logloss": float(log_loss(y_true_arr, y_prob_arr, labels=[0, 1])),
         "brier": float(brier_score_loss(y_true_arr, y_prob_arr)),
         "positive_rate": positive_rate,
+    }
+
+
+def binary_target_summary(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
+    """Return aggregate binary target counts after finite-row filtering."""
+    y_true_arr, _ = _prepare_binary_inputs(y_true, y_prob)
+    events = int((y_true_arr == 1).sum())
+    n = int(y_true_arr.shape[0])
+    return {
+        "n": n,
+        "events": events,
+        "non_events": int(n - events),
+        "event_rate": float(events / n),
     }
 
 

@@ -76,6 +76,10 @@ def test_evaluate_binary_probability_splits_selects_validation_threshold() -> No
     assert results["meta"]["selected_threshold"] == pytest.approx(0.5)
     assert results["meta"]["selected_threshold_score"] == pytest.approx(1.0)
     assert results["meta"]["threshold_selection_source"] == "validation"
+    assert results["test"]["n"] == 4
+    assert results["test"]["events"] == 2
+    assert results["test"]["non_events"] == 2
+    assert results["test"]["event_rate"] == pytest.approx(0.5)
     assert results["test"]["balanced_accuracy"] == pytest.approx(1.0)
 
 
