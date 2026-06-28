@@ -29,6 +29,10 @@ Training summaries should use public aggregate report rows that indicate whether
 the fit was validation-selected or fixed-epoch without validation. Do not include
 checkpoint paths, model weights, private run directories, or per-epoch logs in
 publication-facing summaries.
+Use `motionage.training.build_public_fixed_epoch_plan_summary` before a
+fixed-epoch refit when a manifest needs the planned epoch budget, resume offset,
+remaining epochs, and final-refit strategy without exposing checkpoint paths,
+run directories, or split identifiers.
 Use `motionage.training.build_public_training_log_summary` when a report needs
 training-log context; it reduces per-epoch logs to aggregate epoch, learning-rate,
 freeze-stage, trainable-parameter, and selection-metric metadata.

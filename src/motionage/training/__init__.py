@@ -32,6 +32,7 @@ from motionage.training.optimizer import (
     build_optimizer_parameter_groups,
 )
 from motionage.training.refit import (
+    build_public_fixed_epoch_plan_summary,
     build_trainval_refit_splits,
     resolve_final_refit_config,
     resolve_fixed_epoch_plan,
@@ -75,6 +76,7 @@ __all__ = [
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
+    "build_public_fixed_epoch_plan_summary",
     "build_public_training_log_summary",
     "build_public_training_report_row",
     "build_train_epoch_metrics",

@@ -170,6 +170,47 @@ def test_resolve_fixed_epoch_plan_handles_completed_resume_budget() -> None:
     }
 
 
+def test_build_public_fixed_epoch_plan_summary_omits_private_run_fields() -> None:
+    assert hasattr(training, "build_public_fixed_epoch_plan_summary")
+    plan = {
+        "epoch_budget": 12,
+        "start_epoch": 5,
+        "resumed_from_epoch": 4,
+        "epochs_remaining": 8,
+        "checkpoint_path": "local-checkpoints/fold0.pt",
+        "run_dir": "local-runs/fold0",
+    }
+    final_refit = {
+        "enabled": True,
+        "run_after_tuning": True,
+        "combine_train_val": True,
+        "use_winner_threshold": False,
+        "output_subdir": "private-refit-output",
+        "split_ids": {"train": [1, 2], "test": [3]},
+    }
+
+    summary = training.build_public_fixed_epoch_plan_summary(plan, final_refit_config=final_refit)
+
+    assert summary == {
+        "fit_mode": "fixed_epochs_no_validation",
+        "validation_used": False,
+        "epoch_budget": 12,
+        "start_epoch": 5,
+        "resumed_from_epoch": 4,
+        "epochs_remaining": 8,
+        "resume_used": True,
+        "training_already_complete": False,
+        "final_refit_enabled": True,
+        "run_after_tuning": True,
+        "combine_train_val": True,
+        "use_winner_threshold": False,
+    }
+    assert "checkpoint_path" not in summary
+    assert "run_dir" not in summary
+    assert "output_subdir" not in summary
+    assert "split_ids" not in summary
+
+
 def test_resolve_fixed_epoch_plan_rejects_invalid_epoch_budgets() -> None:
     assert hasattr(training, "resolve_fixed_epoch_plan")
 

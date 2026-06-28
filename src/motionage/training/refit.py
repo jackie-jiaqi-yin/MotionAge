@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -105,3 +106,37 @@ def resolve_fixed_epoch_plan(
         "resumed_from_epoch": resumed_epoch,
         "epochs_remaining": max(epoch_budget - start_epoch + 1, 0),
     }
+
+
+def build_public_fixed_epoch_plan_summary(
+    plan: Mapping[str, Any],
+    *,
+    final_refit_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a public-safe fixed-epoch refit plan summary."""
+    epoch_budget = int(plan["epoch_budget"])
+    start_epoch = int(plan["start_epoch"])
+    resumed_from_epoch = int(plan["resumed_from_epoch"])
+    epochs_remaining = int(plan["epochs_remaining"])
+
+    summary: dict[str, Any] = {
+        "fit_mode": "fixed_epochs_no_validation",
+        "validation_used": False,
+        "epoch_budget": epoch_budget,
+        "start_epoch": start_epoch,
+        "resumed_from_epoch": resumed_from_epoch,
+        "epochs_remaining": epochs_remaining,
+        "resume_used": resumed_from_epoch > 0,
+        "training_already_complete": epochs_remaining == 0,
+    }
+
+    if final_refit_config is not None:
+        summary.update(
+            {
+                "final_refit_enabled": bool(final_refit_config.get("enabled", False)),
+                "run_after_tuning": bool(final_refit_config.get("run_after_tuning", False)),
+                "combine_train_val": bool(final_refit_config.get("combine_train_val", False)),
+                "use_winner_threshold": bool(final_refit_config.get("use_winner_threshold", False)),
+            }
+        )
+    return summary
