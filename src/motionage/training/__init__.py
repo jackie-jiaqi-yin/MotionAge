@@ -5,6 +5,13 @@ from motionage.training.evaluate import (
     align_meta_to_predictions,
     predict,
 )
+from motionage.training.freeze import (
+    FreezeStage,
+    apply_freeze_stage,
+    count_trainable_parameters,
+    parse_freeze_schedule,
+    resolve_freeze_stage,
+)
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.refit import (
     build_trainval_refit_splits,
@@ -25,15 +32,20 @@ from motionage.training.task import (
 
 __all__ = [
     "BINARY_CLASSIFICATION",
+    "FreezeStage",
     "REGRESSION",
     "aggregate_to_participant",
     "align_meta_to_predictions",
+    "apply_freeze_stage",
     "build_model_inputs",
     "build_trainval_refit_splits",
     "configure_torch_cpu_threads",
+    "count_trainable_parameters",
     "is_binary_classification",
+    "parse_freeze_schedule",
     "predict",
     "resolve_final_refit_config",
+    "resolve_freeze_stage",
     "resolve_task_type",
     "resolve_winner_trial",
     "scheduler_mode",
