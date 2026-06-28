@@ -77,6 +77,13 @@ def _build_validate_paper_models_parser(
         help="only include this model family in the emitted output; may be provided more than once",
     )
     parser.add_argument(
+        "--model-id",
+        action="append",
+        dest="output_model_ids",
+        default=None,
+        help="only include this paper model_id in the emitted output; may be provided more than once",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="emit_json",
@@ -110,7 +117,11 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        output_entries = _filter_manifest_entries(entries, args.output_families)
+        output_entries = _filter_manifest_entries(
+            entries,
+            output_families=args.output_families,
+            output_model_ids=args.output_model_ids,
+        )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
@@ -141,22 +152,34 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
 
 def _filter_manifest_entries(
     entries: Sequence[PaperModelManifestEntry],
+    *,
     output_families: Sequence[str] | None,
+    output_model_ids: Sequence[str] | None,
 ) -> tuple[PaperModelManifestEntry, ...]:
-    if not output_families:
-        return tuple(entries)
+    selected = tuple(entries)
 
-    normalized_families = tuple(
-        dict.fromkeys(family.strip().lower() for family in output_families)
-    )
-    observed_families = {entry.family for entry in entries}
-    unknown_families = sorted(set(normalized_families) - observed_families)
-    if unknown_families:
-        raise ValueError(f"Unknown paper model family filters: {unknown_families}")
+    if output_families:
+        normalized_families = tuple(
+            dict.fromkeys(family.strip().lower() for family in output_families)
+        )
+        observed_families = {entry.family for entry in entries}
+        unknown_families = sorted(set(normalized_families) - observed_families)
+        if unknown_families:
+            raise ValueError(f"Unknown paper model family filters: {unknown_families}")
+        selected = tuple(entry for entry in selected if entry.family in normalized_families)
 
-    selected = tuple(entry for entry in entries if entry.family in normalized_families)
+    if output_model_ids:
+        normalized_model_ids = tuple(
+            dict.fromkeys(model_id.strip() for model_id in output_model_ids)
+        )
+        observed_model_ids = {entry.model_id for entry in entries}
+        unknown_model_ids = sorted(set(normalized_model_ids) - observed_model_ids)
+        if unknown_model_ids:
+            raise ValueError(f"Unknown paper model_id filters: {unknown_model_ids}")
+        selected = tuple(entry for entry in selected if entry.model_id in normalized_model_ids)
+
     if not selected:
-        raise ValueError(f"No paper model entries matched family filters: {list(normalized_families)}")
+        raise ValueError("No paper model entries matched output filters.")
     return selected
 
 

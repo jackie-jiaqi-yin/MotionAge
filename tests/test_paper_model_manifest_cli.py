@@ -158,6 +158,99 @@ def test_validate_paper_models_cli_can_filter_json_by_multiple_families(
     assert {model["family"] for model in payload["models"]} == {"lstm", "transformer"}
 
 
+def test_validate_paper_models_cli_can_filter_json_by_model_id(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--json",
+            "--model-id",
+            "lstm_level1_residual",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert payload["study"]["study_id"] == "mortality_cv_primary_60m"
+    assert payload["model_count"] == 1
+    assert payload["family_counts"] == {"lstm": 1}
+    assert payload["model_ids_by_family"] == {"lstm": ["lstm_level1_residual"]}
+    assert (
+        payload["models"][0]["source_config_path"]
+        == "configs/paper/lstm_level1_residual_60m.yaml"
+    )
+
+
+def test_validate_paper_models_cli_can_filter_markdown_by_family_and_model_id(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--markdown",
+            "--family",
+            "transformer",
+            "--model-id",
+            "transformer_level1_residual",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 0
+    assert captured.err == ""
+    assert "| study_id | mortality_cv_primary_60m |" in captured.out
+    assert "transformer_level1_residual" in captured.out
+    assert "transformer_fitbit_only" not in captured.out
+    assert "lstm_level1_residual" not in captured.out
+
+
+def test_validate_paper_models_cli_returns_error_for_unknown_model_id(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--model-id",
+            "missing_model",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert captured.out == ""
+    assert "Unknown paper model_id filters: ['missing_model']" in captured.err
+
+
+def test_validate_paper_models_cli_returns_error_for_empty_family_model_intersection(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--family",
+            "lstm",
+            "--model-id",
+            "transformer_fitbit_only",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert captured.out == ""
+    assert "No paper model entries matched output filters" in captured.err
+
+
 def test_validate_paper_models_cli_returns_error_for_unknown_output_family(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -440,6 +533,37 @@ def test_validate_paper_models_console_script_output_file_with_family_filter(tmp
     assert set(payload["model_ids_by_family"]) == {"transformer"}
     assert payload["study"]["study_id"] == "mortality_cv_primary_60m"
     assert payload["study"]["n_folds"] == 5
+
+
+def test_validate_paper_models_console_script_output_file_with_model_id_filter(tmp_path: Path) -> None:
+    import subprocess
+
+    output_path = tmp_path / "manifest.json"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage-validate-paper-models",
+            "--json",
+            "--model-id",
+            "gru_level1_latefusion",
+            "--output",
+            str(output_path),
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert payload["model_count"] == 1
+    assert payload["family_counts"] == {"gru": 1}
+    assert payload["models"][0]["model_id"] == "gru_level1_latefusion"
 
 
 def _write_yaml(path: Path, payload: object) -> None:
