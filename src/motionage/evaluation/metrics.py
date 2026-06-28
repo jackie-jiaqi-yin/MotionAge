@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from numbers import Real
+
 import numpy as np
 from scipy.stats import somersd
 from sklearn.metrics import (
@@ -22,6 +25,26 @@ try:
     from lifelines.utils import concordance_index as lifelines_concordance_index
 except Exception:  # pragma: no cover - optional in lightweight environments.
     lifelines_concordance_index = None
+
+
+_PUBLIC_BINARY_EVALUATION_FIELDS = (
+    "n",
+    "events",
+    "non_events",
+    "event_rate",
+    "auroc",
+    "auprc",
+    "logloss",
+    "brier",
+    "threshold",
+    "accuracy",
+    "balanced_accuracy",
+    "precision",
+    "recall",
+    "f1",
+)
+_PUBLIC_BINARY_EVALUATION_COUNT_FIELDS = {"n", "events", "non_events"}
+_REQUIRED_PUBLIC_BINARY_EVALUATION_FIELDS = ("n", "events", "non_events", "event_rate")
 
 
 def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
@@ -52,6 +75,30 @@ def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[s
         "brier": float(brier_score_loss(y_true_arr, y_prob_arr)),
         "positive_rate": positive_rate,
     }
+
+
+def build_public_binary_evaluation_row(
+    metrics: Mapping[str, object],
+    *,
+    model: str | None = None,
+    split: str | None = None,
+) -> dict[str, str | float | int]:
+    """Return an allowlisted aggregate binary-evaluation row for public reports."""
+    row: dict[str, str | float | int] = {}
+    if model is not None:
+        row["model"] = str(model)
+    if split is not None:
+        row["split"] = str(split)
+
+    for field in _PUBLIC_BINARY_EVALUATION_FIELDS:
+        if field not in metrics:
+            continue
+        row[field] = _coerce_public_metric_value(field, metrics[field])
+
+    missing = [field for field in _REQUIRED_PUBLIC_BINARY_EVALUATION_FIELDS if field not in row]
+    if missing:
+        raise ValueError(f"Missing required public binary evaluation fields: {missing}.")
+    return row
 
 
 def binary_target_summary(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
@@ -222,6 +269,22 @@ def _c_index(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     if not np.isfinite(d_stat):
         return 0.5
     return float(np.clip((d_stat + 1.0) / 2.0, 0.0, 1.0))
+
+
+def _coerce_public_metric_value(field: str, value: object) -> float | int:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"Public binary evaluation field {field!r} must be numeric.")
+
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise ValueError(f"Public binary evaluation field {field!r} must be finite.")
+    if field in _PUBLIC_BINARY_EVALUATION_COUNT_FIELDS:
+        if not numeric.is_integer():
+            raise ValueError(f"Public binary evaluation count field {field!r} must be an integer.")
+        return int(numeric)
+    return numeric
 
 
 def _prepare_binary_inputs(y_true: np.ndarray, y_prob: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

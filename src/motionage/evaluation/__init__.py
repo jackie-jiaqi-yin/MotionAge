@@ -1,6 +1,7 @@
 """Evaluation utilities for MotionAge models and reports."""
 
 from motionage.evaluation.metrics import (
+    build_public_binary_evaluation_row,
     binary_precision_recall_curve_rows,
     binary_probability_metrics,
     binary_roc_curve_rows,
@@ -21,6 +22,7 @@ from motionage.evaluation.predictions import (
 __all__ = [
     "aggregate_to_participant",
     "align_meta_to_predictions",
+    "build_public_binary_evaluation_row",
     "binary_precision_recall_curve_rows",
     "binary_probability_metrics",
     "binary_roc_curve_rows",

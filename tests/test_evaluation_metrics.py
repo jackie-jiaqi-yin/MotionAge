@@ -8,6 +8,7 @@ import pytest
 
 import motionage.evaluation.metrics as motionage_metrics
 from motionage.evaluation.metrics import (
+    build_public_binary_evaluation_row,
     binary_precision_recall_curve_rows,
     binary_probability_metrics,
     binary_roc_curve_rows,
@@ -71,6 +72,33 @@ def test_binary_probability_metrics_filters_invalid_rows_and_reports_fallbacks()
     one_class = binary_probability_metrics(np.asarray([1, 1]), np.asarray([0.2, 0.8]))
     assert one_class["auroc"] == pytest.approx(0.5)
     assert one_class["auprc"] == pytest.approx(1.0)
+
+
+def test_public_binary_evaluation_row_uses_allowlisted_aggregate_fields() -> None:
+    metrics = binary_probability_metrics(
+        np.asarray([0, 0, 1, 1]),
+        np.asarray([0.1, 0.3, 0.7, 0.9]),
+    )
+    metrics.update(
+        {
+            "participant_id": "hidden",
+            "prediction_path": "/private/predictions.csv",
+            "positive_rate": 0.5,
+        }
+    )
+
+    row = build_public_binary_evaluation_row(metrics, model="Transformer", split="test")
+
+    assert row["model"] == "Transformer"
+    assert row["split"] == "test"
+    assert row["n"] == 4
+    assert row["events"] == 2
+    assert row["non_events"] == 2
+    assert row["event_rate"] == pytest.approx(0.5)
+    assert row["auroc"] == pytest.approx(1.0)
+    assert "participant_id" not in row
+    assert "prediction_path" not in row
+    assert "positive_rate" not in row
 
 
 def test_binary_threshold_metrics_and_selection_use_validation_scores() -> None:
