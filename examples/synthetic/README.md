@@ -16,4 +16,8 @@ The command writes:
 - `metadata_l1.yaml`
 - `manifest.yaml`
 
+`manifest.yaml` records the synthetic public-boundary declaration, row counts,
+and column schema so downstream smoke tests can validate these examples without
+assuming they are real NHANES participant records or trained model artifacts.
+
 The generated directory is for local use and should not be committed.

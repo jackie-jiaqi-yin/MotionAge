@@ -56,6 +56,28 @@ def test_generate_synthetic_inputs_is_deterministic_for_seed(tmp_path: Path) -> 
     pd.testing.assert_frame_equal(first_covariates, second_covariates)
 
 
+def test_generate_synthetic_inputs_manifest_declares_public_boundary_and_schema(tmp_path: Path) -> None:
+    module = _load_generator()
+
+    outputs = module.generate_synthetic_inputs(tmp_path, participants=10, days=3, seed=19)
+    activity = pd.read_parquet(outputs["activity_mortstat"])
+    covariates = pd.read_parquet(outputs["covariates"])
+    manifest = yaml.safe_load(outputs["manifest"].read_text(encoding="utf-8"))
+
+    assert manifest["public_boundary"] == {
+        "synthetic": True,
+        "contains_real_participants": False,
+        "contains_trained_weights": False,
+        "safe_for_public_smoke_tests": True,
+    }
+    assert manifest["row_counts"] == {
+        "activity_mortstat": len(activity),
+        "covariates": len(covariates),
+    }
+    assert manifest["columns"]["activity_mortstat"] == activity.columns.tolist()
+    assert manifest["columns"]["covariates"] == covariates.columns.tolist()
+
+
 def _load_generator():
     spec = importlib.util.spec_from_file_location("synthetic_inputs", GENERATOR_PATH)
     assert spec is not None

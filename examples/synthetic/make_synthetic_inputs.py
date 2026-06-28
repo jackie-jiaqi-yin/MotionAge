@@ -86,10 +86,24 @@ def generate_synthetic_inputs(
         "participants": int(participants),
         "days": int(days),
         "seed": int(seed),
+        "public_boundary": {
+            "synthetic": True,
+            "contains_real_participants": False,
+            "contains_trained_weights": False,
+            "safe_for_public_smoke_tests": True,
+        },
         "files": {
             "activity_mortstat": "activity_mortstat_joined.parquet",
             "covariates": "nhanes_mortality_covariates_l1.parquet",
             "metadata": "metadata_l1.yaml",
+        },
+        "row_counts": {
+            "activity_mortstat": int(len(activity)),
+            "covariates": int(len(covariates)),
+        },
+        "columns": {
+            "activity_mortstat": activity.columns.tolist(),
+            "covariates": covariates.columns.tolist(),
         },
     }
 
