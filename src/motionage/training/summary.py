@@ -69,6 +69,29 @@ def build_fixed_epoch_training_summary(
     return summary
 
 
+def build_public_training_report_row(summary: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a public-safe aggregate training report row from a summary."""
+    fit_mode = str(summary.get("fit_mode", "validation_selected"))
+    public_row: dict[str, Any] = {
+        "task_type": summary.get("task_type"),
+        "fit_mode": fit_mode,
+        "validation_used": fit_mode != "fixed_epochs_no_validation",
+        "selection_metric_name": summary.get("selection_metric_name"),
+        "selection_metric_direction": summary.get("selection_metric_direction"),
+        "best_val_metric": summary.get("best_val_metric"),
+        "best_val_loss": summary.get("best_val_loss"),
+        "best_epoch": summary.get("best_epoch"),
+        "epochs_trained": summary.get("epochs_trained"),
+    }
+    for optional_key in ("fixed_epochs", "start_epoch", "resumed_from_epoch"):
+        if optional_key in summary:
+            public_row[optional_key] = summary[optional_key]
+    for key, value in summary.items():
+        if key.startswith("best_val_") and key not in public_row:
+            public_row[key] = value
+    return public_row
+
+
 def _task_metric_summary(
     task_type: TaskType | str,
     best_eval_metrics: Mapping[str, float],

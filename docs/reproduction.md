@@ -25,6 +25,11 @@ uv run python scripts/train/run_mortality_cv.py --config configs/paper/mortality
 uv run python scripts/analyze/run_motionage.py --config configs/paper/motionage_analysis.yaml
 ```
 
+Training summaries should use public aggregate report rows that indicate whether
+the fit was validation-selected or fixed-epoch without validation. Do not include
+checkpoint paths, model weights, private run directories, or per-epoch logs in
+publication-facing summaries.
+
 ## Level 3: Artifact Replay
 
 Purpose: regenerate paper tables and robustness reports from approved prediction tables or model artifacts.

@@ -45,6 +45,7 @@ from motionage.training.scheduler import (
 from motionage.training.selection import initial_best_metric, metric_improved
 from motionage.training.summary import (
     build_fixed_epoch_training_summary,
+    build_public_training_report_row,
     build_training_summary,
 )
 from motionage.training.task import (
@@ -73,6 +74,7 @@ __all__ = [
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
+    "build_public_training_report_row",
     "build_train_epoch_metrics",
     "build_training_log_row",
     "build_training_summary",

@@ -97,6 +97,45 @@ def test_build_fixed_epoch_training_summary_marks_no_validation_fit() -> None:
     assert math.isnan(summary["best_val_r2"])
 
 
+def test_build_public_training_report_row_omits_private_run_fields() -> None:
+    assert hasattr(training, "build_public_training_report_row")
+
+    summary = training.build_fixed_epoch_training_summary(
+        task_type=training.BINARY_CLASSIFICATION,
+        selection_metric_name="auroc",
+        selection_metric_direction="maximize",
+        best_val_metric=float("nan"),
+        best_val_loss=float("nan"),
+        best_epoch=12,
+        epochs_trained=8,
+        best_eval_metrics={},
+        fixed_epochs=12,
+        start_epoch=5,
+        resumed_from_epoch=4,
+    )
+    summary["checkpoint_path"] = "local-checkpoints/fold0.pt"
+    summary["training_log"] = [{"epoch": 5, "train_loss": 0.72}]
+
+    report_row = training.build_public_training_report_row(summary)
+
+    assert report_row["task_type"] == training.BINARY_CLASSIFICATION
+    assert report_row["fit_mode"] == "fixed_epochs_no_validation"
+    assert report_row["validation_used"] is False
+    assert report_row["selection_metric_name"] == "auroc"
+    assert report_row["selection_metric_direction"] == "maximize"
+    assert report_row["best_epoch"] == 12
+    assert report_row["epochs_trained"] == 8
+    assert report_row["fixed_epochs"] == 12
+    assert report_row["start_epoch"] == 5
+    assert report_row["resumed_from_epoch"] == 4
+    assert math.isnan(report_row["best_val_metric"])
+    assert math.isnan(report_row["best_val_loss"])
+    assert math.isnan(report_row["best_val_auroc"])
+    assert math.isnan(report_row["best_val_auprc"])
+    assert "checkpoint_path" not in report_row
+    assert "training_log" not in report_row
+
+
 def test_training_summary_rejects_unknown_task_type() -> None:
     assert hasattr(training, "build_training_summary")
 
