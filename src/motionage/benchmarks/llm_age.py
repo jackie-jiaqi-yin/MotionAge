@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from numbers import Real
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,18 @@ LLM_AGE_FEATURE_SETS: dict[str, tuple[str, ...]] = {
     "llm_age_raw": (LLM_AGE_COLUMN, "sex_code"),
     "llm_age_accel": (LLM_AGE_ACCEL_COLUMN, "RIDAGEYR", "sex_code"),
 }
+_PUBLIC_LLM_AGE_SUMMARY_FIELDS = (
+    "feature_set",
+    "population",
+    "fold_count",
+    "test_participants_mean",
+    "test_auroc_mean",
+    "test_auprc_mean",
+    "test_logloss_mean",
+    "test_brier_mean",
+    "test_positive_rate_mean",
+)
+_PUBLIC_LLM_AGE_SUMMARY_COUNT_FIELDS = {"fold_count"}
 
 
 def load_llm_age_participants(csv_path: Path | str) -> pd.DataFrame:
@@ -215,6 +228,34 @@ def run_llm_age_benchmark_cv(
     return summary
 
 
+def build_public_llm_age_summary_table(
+    summary: pd.DataFrame,
+    *,
+    analysis: str = "LLM-Age 60-month benchmark",
+) -> list[dict[str, str | float | int]]:
+    """Return allowlisted aggregate LLM-age rows for public reports."""
+    missing = [field for field in _PUBLIC_LLM_AGE_SUMMARY_FIELDS if field not in summary.columns]
+    if missing:
+        raise ValueError(f"LLM-age summary missing required public fields: {missing}.")
+
+    rows: list[dict[str, str | float | int]] = []
+    for record in summary.loc[:, _PUBLIC_LLM_AGE_SUMMARY_FIELDS].to_dict("records"):
+        row: dict[str, str | float | int] = {
+            "analysis": str(analysis),
+            "feature_set": str(record["feature_set"]),
+            "population": str(record["population"]),
+        }
+        for field in _PUBLIC_LLM_AGE_SUMMARY_FIELDS:
+            if field in {"feature_set", "population"}:
+                continue
+            row[field] = _coerce_public_llm_age_summary_value(field, record[field])
+        rows.append(row)
+
+    if not rows:
+        raise ValueError("At least one LLM-age summary row is required.")
+    return rows
+
+
 def _population_metrics(subset: pd.DataFrame) -> dict[str, float]:
     if subset.empty:
         return {
@@ -271,6 +312,22 @@ def _normalize_bool_series(series: pd.Series) -> pd.Series:
     if resolved.isna().any():
         raise ValueError("llm_ok contains unsupported values.")
     return resolved.astype(bool)
+
+
+def _coerce_public_llm_age_summary_value(field: str, value: object) -> float | int:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"Public LLM-age summary field {field!r} must be numeric.")
+
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise ValueError(f"Public LLM-age summary field {field!r} must be finite.")
+    if field in _PUBLIC_LLM_AGE_SUMMARY_COUNT_FIELDS:
+        if not numeric.is_integer():
+            raise ValueError(f"Public LLM-age summary count field {field!r} must be an integer.")
+        return int(numeric)
+    return numeric
 
 
 def _prediction_frame(

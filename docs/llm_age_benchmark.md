@@ -20,3 +20,9 @@ acceleration plus chronological age plus sex.
 
 Generated fold outputs should be written under ignored local output directories,
 not committed to git.
+
+For manuscript-facing or README-facing summaries, pass the aggregate
+`summary.csv` frame to `build_public_llm_age_summary_table`. The helper keeps
+only the analysis label, feature set, population, fold count, mean sample size,
+and mean performance metrics, so report rows do not expose fold directories,
+participant-level predictions, prompt outputs, or local artifact paths.

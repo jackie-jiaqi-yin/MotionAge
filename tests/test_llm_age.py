@@ -9,6 +9,7 @@ from motionage.benchmarks.llm_age import (
     LLM_AGE_ACCEL_COLUMN,
     LLM_AGE_COLUMN,
     LLM_AGE_FEATURE_SETS,
+    build_public_llm_age_summary_table,
     discover_cv_folds,
     load_llm_age_participants,
     run_fold_benchmark,
@@ -19,6 +20,7 @@ from motionage.benchmarks.llm_age import (
 def test_llm_age_helpers_are_exported_from_benchmarks_namespace() -> None:
     assert benchmarks.LLM_AGE_COLUMN == LLM_AGE_COLUMN
     assert benchmarks.LLM_AGE_FEATURE_SETS == LLM_AGE_FEATURE_SETS
+    assert benchmarks.build_public_llm_age_summary_table is build_public_llm_age_summary_table
     assert benchmarks.load_llm_age_participants is load_llm_age_participants
     assert benchmarks.run_llm_age_benchmark_cv is run_llm_age_benchmark_cv
 
@@ -90,6 +92,47 @@ def test_run_llm_age_benchmark_cv_writes_local_fold_outputs_and_summary(tmp_path
     assert (output_root / "summary.csv").exists()
     assert set(summary["feature_set"]) == set(LLM_AGE_FEATURE_SETS)
     assert set(summary["population"]) == {"overall", "age_ge_40"}
+
+
+def test_public_llm_age_summary_table_keeps_aggregate_fields_only() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "feature_set": "llm_age_raw",
+                "population": "overall",
+                "fold_count": 2,
+                "test_auroc_mean": 0.76,
+                "test_auprc_mean": 0.42,
+                "test_logloss_mean": 0.61,
+                "test_brier_mean": 0.21,
+                "test_positive_rate_mean": 0.18,
+                "test_participants_mean": 1200.0,
+                "fold": "fold_0",
+                "participant_predictions_path": "generated/fold_0/predictions.csv",
+                "raw_prediction_rows": [0.2, 0.8],
+            }
+        ]
+    )
+
+    rows = build_public_llm_age_summary_table(summary, analysis="LLM-Age 60-month benchmark")
+
+    assert rows == [
+        {
+            "analysis": "LLM-Age 60-month benchmark",
+            "feature_set": "llm_age_raw",
+            "population": "overall",
+            "fold_count": 2,
+            "test_participants_mean": 1200.0,
+            "test_auroc_mean": 0.76,
+            "test_auprc_mean": 0.42,
+            "test_logloss_mean": 0.61,
+            "test_brier_mean": 0.21,
+            "test_positive_rate_mean": 0.18,
+        }
+    ]
+    assert "fold" not in rows[0]
+    assert "participant_predictions_path" not in rows[0]
+    assert "raw_prediction_rows" not in rows[0]
 
 
 def _base_participants() -> pd.DataFrame:
