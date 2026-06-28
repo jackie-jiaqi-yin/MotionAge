@@ -49,6 +49,13 @@ uv run motionage --version
 uv run motionage-validate-paper-models --version
 ```
 
+Capture a compact environment report:
+
+```bash
+uv run motionage doctor
+uv run motionage doctor --json
+```
+
 Run the current smoke checks:
 
 ```bash

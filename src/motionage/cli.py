@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import sys
 from collections import Counter
 from dataclasses import asdict
@@ -19,6 +20,8 @@ from motionage.paper_manifest import (
     validate_paper_model_manifest,
 )
 
+DOCTOR_DEPENDENCIES = ("numpy", "pandas", "pyyaml", "scipy", "scikit-learn", "torch")
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the MotionAge command-line interface."""
@@ -27,6 +30,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "validate-paper-models":
         return _validate_paper_models(args)
+    if args.command == "doctor":
+        return _doctor(args)
 
     parser.print_help()
     return 2
@@ -54,6 +59,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "validate-paper-models",
             help="validate paper model manifest coverage and source config consistency",
         ),
+    )
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="report MotionAge runtime and dependency versions",
+    )
+    doctor_parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="emit_json",
+        help="emit the environment report as JSON",
     )
     return parser
 
@@ -127,6 +142,49 @@ def _package_version() -> str:
         return version("motionage")
     except PackageNotFoundError:
         return "0+unknown"
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    payload = _doctor_payload()
+    if args.emit_json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(_doctor_text(payload))
+    return 0
+
+
+def _doctor_payload() -> dict[str, object]:
+    return {
+        "motionage": _package_version(),
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "dependencies": {
+            dependency: _distribution_version(dependency)
+            for dependency in DOCTOR_DEPENDENCIES
+        },
+    }
+
+
+def _distribution_version(distribution_name: str) -> str:
+    try:
+        return version(distribution_name)
+    except PackageNotFoundError:
+        return "not installed"
+
+
+def _doctor_text(payload: dict[str, object]) -> str:
+    dependencies = payload["dependencies"]
+    assert isinstance(dependencies, dict)
+    lines = [
+        "MotionAge environment report",
+        f"motionage: {payload['motionage']}",
+        f"python: {payload['python']}",
+        f"platform: {payload['platform']}",
+        "dependencies:",
+    ]
+    for name, dependency_version in dependencies.items():
+        lines.append(f"  {name}: {dependency_version}")
+    return "\n".join(lines)
 
 
 def _validate_paper_models(args: argparse.Namespace) -> int:

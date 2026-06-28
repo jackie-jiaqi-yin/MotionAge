@@ -10,6 +10,8 @@ Purpose: verify that the package imports, CI environment, and paper-visible mode
 uv sync --extra test
 uv run motionage --version
 uv run motionage-validate-paper-models --version
+uv run motionage doctor
+uv run motionage doctor --json
 uv run python -m compileall src
 uv run pytest
 ```
