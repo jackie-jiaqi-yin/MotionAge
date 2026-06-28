@@ -55,6 +55,12 @@ Validate the paper-visible model manifest without requiring NHANES data:
 uv run motionage-validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
 ```
 
+Equivalent top-level CLI form:
+
+```bash
+uv run motionage validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
+```
+
 The manifest check verifies that the curated paper configs cover the GRU, LSTM, and Transformer families and can emit compact JSON or Markdown summaries for inspection.
 
 ## Reproduction Levels

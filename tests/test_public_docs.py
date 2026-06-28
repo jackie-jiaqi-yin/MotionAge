@@ -11,6 +11,7 @@ def test_public_docs_include_paper_manifest_validation_recipe() -> None:
 
     for text in (readme, reproduction):
         assert "motionage-validate-paper-models" in text
+        assert "motionage validate-paper-models" in text
         assert "configs/paper/mortality_cv_primary_60m.yaml" in text
         assert "--summary-only" in text
         for family in ("GRU", "LSTM", "Transformer"):

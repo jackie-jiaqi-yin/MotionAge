@@ -18,6 +18,12 @@ The paper manifest can be checked without raw NHANES files, processed participan
 uv run motionage-validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
 ```
 
+Equivalent top-level CLI form:
+
+```bash
+uv run motionage validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
+```
+
 This command validates the curated GRU, LSTM, and Transformer model families listed in `configs/paper/mortality_cv_primary_60m.yaml`. Use `--markdown --summary-only` when preparing a compact reader-facing summary of the same manifest metadata.
 
 ## Level 2: Public-Data Reproduction

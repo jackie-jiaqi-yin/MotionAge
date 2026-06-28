@@ -25,6 +25,7 @@ dependencies = [
 ]
 
 [project.scripts]
+motionage = "motionage.cli:main"
 motionage-validate-paper-models = "motionage.cli:validate_paper_models_main"
 
 [project.optional-dependencies]

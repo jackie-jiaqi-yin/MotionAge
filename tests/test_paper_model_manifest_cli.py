@@ -610,6 +610,12 @@ def test_validate_paper_models_console_script_is_registered() -> None:
     )
 
 
+def test_motionage_console_script_is_registered() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert pyproject["project"]["scripts"]["motionage"] == "motionage.cli:main"
+
+
 def test_validate_paper_models_console_script_json_output() -> None:
     import subprocess
 
@@ -630,6 +636,33 @@ def test_validate_paper_models_console_script_json_output() -> None:
     payload = json.loads(result.stdout)
     assert payload["model_count"] == 10
     assert payload["family_counts"]["transformer"] == 3
+
+
+def test_motionage_console_script_validate_paper_models_summary_only_json() -> None:
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage",
+            "validate-paper-models",
+            "--json",
+            "--summary-only",
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+    assert result.stderr == ""
+    assert payload["model_count"] == 10
+    assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
+    assert "model_ids_by_family" not in payload
+    assert "models" not in payload
 
 
 def test_validate_paper_models_console_script_summary_only_json_output_file(
