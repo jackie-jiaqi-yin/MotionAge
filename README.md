@@ -6,15 +6,21 @@ The repository is organized as a paper-reproduction codebase. It is intended for
 
 ## Repository Status
 
-This repository is being built in focused pull requests. The current paper-configuration stack includes public config templates and a manifest validation CLI for paper-visible GRU, LSTM, and Transformer model families. Model implementations, MotionAge analysis, benchmark scripts, and robustness reports are added in separate topic PRs.
+This repository is being built in focused pull requests. The public foundation includes the core library modules needed to inspect the paper implementation. This paper-configuration stack adds public config templates and manifest validation CLI coverage for paper-visible GRU, LSTM, and Transformer model families.
 
 ## What Is Included
 
 - Source package namespace: `motionage`
+- Public data utilities for dataset validation, split manifests, and accelerometer window construction
+- Model implementations for GRU, LSTM, Transformer, and static-covariate variants
+- MotionAge risk-to-age mapping utilities
+- PhenoAge benchmark helpers
+- Paired-AUROC statistics and public report-table helpers
+- Public activity-profile interpretability summaries
 - Paper model configuration templates under `configs/paper/`
 - A manifest validation CLI: `motionage-validate-paper-models`
-- Documentation for data preparation, method overview, artifact policy, and reproduction levels
-- CI skeleton and package import smoke test
+- Documentation for data preparation, method overview, benchmark scope, artifact policy, and reproduction levels
+- CI checks and synthetic smoke tests
 - A public boundary that keeps implementation code separate from generated data, checkpoints, and private research notes
 
 ## What Is Not Committed
@@ -82,11 +88,11 @@ See [docs/cli.md](docs/cli.md) for the current public command reference.
 
 ## Reproduction Levels
 
-1. **Synthetic smoke test:** verifies package imports and later CLI entry points without NHANES data.
+1. **Synthetic smoke test:** verifies package imports and current public library behavior without NHANES data.
 2. **Public-data reproduction:** prepares NHANES accelerometer, demographics, mortality, and covariate inputs from public sources on the user's machine.
 3. **Artifact replay:** regenerates paper tables and reports from approved prediction tables or model artifacts placed outside git.
 
-See [docs/reproduction.md](docs/reproduction.md) for the planned command structure.
+See [docs/reproduction.md](docs/reproduction.md) for the staged command structure.
 
 ## Citation
 

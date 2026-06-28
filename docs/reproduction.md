@@ -1,10 +1,10 @@
 # Reproduction
 
-This repository supports three reproduction levels. The current public stack includes package checks plus paper model manifest validation. Full public-data preparation, model training, MotionAge analysis, and report replay commands are added in focused topic PRs as they become public-safe.
+This repository supports three reproduction levels. Core library smoke tests and paper model manifest validation are available in the current public stack. Public-data commands are staged as topic PRs add command-line wrappers and approved artifact-replay entry points.
 
 ## Level 1: Synthetic Smoke and Paper Config Checks
 
-Purpose: verify that the package imports, CI environment, and paper-visible model config inventory are healthy.
+Purpose: verify that the package imports, model constructors, MotionAge mapping utilities, benchmark helpers, statistics, reporting helpers, CLI entry points, and paper-visible model config inventory behave correctly without NHANES data.
 
 ```bash
 uv sync --extra test
@@ -37,7 +37,7 @@ See the [CLI reference](cli.md) for the current public command list.
 
 Purpose: regenerate local NHANES-derived inputs and run paper model configurations.
 
-Planned command structure:
+Staged command structure:
 
 ```bash
 uv run python scripts/data/prepare_nhanes_inputs.py --config configs/data/nhanes.yaml
@@ -50,7 +50,7 @@ uv run python scripts/analyze/run_motionage.py --config configs/paper/motionage_
 
 Purpose: regenerate paper tables and robustness reports from approved prediction tables or model artifacts.
 
-Planned command structure:
+Staged command structure:
 
 ```bash
 uv run python scripts/reproduce/table1_uncertainty.py --artifact-dir artifacts
