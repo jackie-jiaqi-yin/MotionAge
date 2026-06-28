@@ -181,6 +181,83 @@ def build_public_mortality_cv_summary_table(
     return pd.DataFrame(rows, columns=output_columns)
 
 
+def build_public_mortality_cv_rank_table(
+    summary: pd.DataFrame,
+    *,
+    model_labels: dict[str, str] | None = None,
+    feature_labels: dict[str, str] | None = None,
+    metric: str = "test_auroc",
+    higher_is_better: bool = True,
+    official_only: bool = True,
+    digits: int = 3,
+    missing: str = "",
+) -> pd.DataFrame:
+    """Build a public aggregate ranking table from mortality-CV summaries."""
+    output_columns = [
+        "rank",
+        "model",
+        "feature_set",
+        "fold_count",
+        "metric",
+        "mean",
+        "sd",
+        "mean_sd",
+    ]
+    if summary.empty:
+        return pd.DataFrame(columns=output_columns)
+
+    mean_column = f"{metric}_mean"
+    sd_column = f"{metric}_std"
+    _require_columns(
+        summary,
+        [
+            "model_id",
+            "stage2_experiment_id",
+            "fold_count",
+            "is_official",
+            mean_column,
+            sd_column,
+        ],
+    )
+
+    working = summary.copy()
+    if official_only:
+        working = working[working["is_official"].astype(bool)].copy()
+    if working.empty:
+        return pd.DataFrame(columns=output_columns)
+
+    working[mean_column] = pd.to_numeric(working[mean_column], errors="coerce")
+    working[sd_column] = pd.to_numeric(working[sd_column], errors="coerce")
+    working = working.sort_values(
+        [mean_column, "model_id", "stage2_experiment_id"],
+        ascending=[not higher_is_better, True, True],
+        na_position="last",
+    ).reset_index(drop=True)
+
+    model_labels = model_labels or {}
+    feature_labels = feature_labels or {}
+    rows: list[dict[str, object]] = []
+    for rank, row in enumerate(working.to_dict(orient="records"), start=1):
+        model_id = str(row["model_id"])
+        feature_id = str(row["stage2_experiment_id"])
+        mean = float(row[mean_column])
+        sd = float(row[sd_column])
+        rows.append(
+            {
+                "rank": int(rank),
+                "model": model_labels.get(model_id, model_id),
+                "feature_set": feature_labels.get(feature_id, feature_id),
+                "fold_count": int(row["fold_count"]),
+                "metric": str(metric),
+                "mean": mean,
+                "sd": sd,
+                "mean_sd": format_mean_sd(mean, sd, digits=digits, missing=missing),
+            }
+        )
+
+    return pd.DataFrame(rows, columns=output_columns)
+
+
 def _require_columns(frame: pd.DataFrame, columns: list[str]) -> None:
     missing = [column for column in columns if column not in frame.columns]
     if missing:

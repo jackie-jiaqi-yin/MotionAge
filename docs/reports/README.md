@@ -25,6 +25,9 @@ sets, and format aggregate summary rows for publication tables.
 `build_public_mortality_cv_summary_table` converts those summaries into
 reader-facing labels and omits internal model ids, feature ids, and private
 experiment paths from public tables.
+`build_public_mortality_cv_rank_table` ranks aggregate model rows by a selected
+summary metric such as AUROC or AUPRC while keeping only reader-facing labels,
+fold counts, metric means, fold SDs, and formatted mean/SD cells.
 
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.

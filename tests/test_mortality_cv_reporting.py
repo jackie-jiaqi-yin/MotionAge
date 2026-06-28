@@ -7,6 +7,7 @@ import pandas as pd
 
 from motionage.reporting.mortality_cv import (
     build_mortality_cv_summary_table,
+    build_public_mortality_cv_rank_table,
     build_public_mortality_cv_summary_table,
     collect_fold_metrics,
     summarize_mortality_cv_fold_metrics,
@@ -247,3 +248,82 @@ def test_build_public_mortality_cv_summary_table_uses_reader_labels_and_omits_pr
     assert "metrics_path" not in table.columns
     assert "model_id" not in table.columns
     assert "stage2_experiment_id" not in table.columns
+
+
+def test_build_public_mortality_cv_rank_table_orders_aggregate_model_rows() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "model_id": "gru_level1_latefusion",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.836,
+                "test_auroc_std": 0.014,
+                "test_auprc_mean": 0.331,
+                "test_auprc_std": 0.021,
+                "metrics_path": "internal-run/gru.csv",
+            },
+            {
+                "model_id": "lstm_level1_latefusion",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.824,
+                "test_auroc_std": 0.016,
+                "test_auprc_mean": 0.318,
+                "test_auprc_std": 0.024,
+                "metrics_path": "internal-run/lstm.csv",
+            },
+            {
+                "model_id": "transformer_level1_latefusion",
+                "stage2_experiment_id": "stage1_probability",
+                "fold_count": 5,
+                "is_official": False,
+                "test_auroc_mean": 0.818,
+                "test_auroc_std": 0.018,
+                "test_auprc_mean": 0.311,
+                "test_auprc_std": 0.026,
+                "metrics_path": "internal-run/transformer.csv",
+            },
+        ]
+    )
+
+    table = build_public_mortality_cv_rank_table(
+        summary,
+        model_labels={
+            "gru_level1_latefusion": "GRU MotionAge-FRC",
+            "lstm_level1_latefusion": "LSTM MotionAge-FRC",
+            "transformer_level1_latefusion": "Transformer MotionAge-FRC",
+        },
+        feature_labels={"motionage_accel": "MotionAge acceleration"},
+        metric="test_auroc",
+        official_only=True,
+        digits=3,
+    )
+
+    assert table.to_dict("records") == [
+        {
+            "rank": 1,
+            "model": "GRU MotionAge-FRC",
+            "feature_set": "MotionAge acceleration",
+            "fold_count": 5,
+            "metric": "test_auroc",
+            "mean": 0.836,
+            "sd": 0.014,
+            "mean_sd": "0.836 +/- 0.014",
+        },
+        {
+            "rank": 2,
+            "model": "LSTM MotionAge-FRC",
+            "feature_set": "MotionAge acceleration",
+            "fold_count": 5,
+            "metric": "test_auroc",
+            "mean": 0.824,
+            "sd": 0.016,
+            "mean_sd": "0.824 +/- 0.016",
+        },
+    ]
+    assert "model_id" not in table.columns
+    assert "stage2_experiment_id" not in table.columns
+    assert "metrics_path" not in table.columns
