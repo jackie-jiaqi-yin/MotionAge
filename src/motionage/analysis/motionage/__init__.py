@@ -10,6 +10,7 @@ from motionage.analysis.motionage.mapping import (
 from motionage.analysis.motionage.source_predictions import (
     build_participant_source_predictions,
     logits_to_probabilities,
+    summarize_source_predictions,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "fit_motionage_mapping",
     "logits_to_probabilities",
     "mapping_to_jsonable",
+    "summarize_source_predictions",
 ]

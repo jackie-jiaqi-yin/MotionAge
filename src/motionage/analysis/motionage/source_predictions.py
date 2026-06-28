@@ -97,6 +97,61 @@ def build_participant_source_predictions(
     return grouped[ordered_columns].copy()
 
 
+def summarize_source_predictions(
+    participants: pd.DataFrame,
+    *,
+    split_column: str = "split",
+    target_column: str | None = None,
+    participant_probability_column: str = "participant_probability",
+    n_windows_column: str = "n_windows",
+) -> list[dict[str, float | int | str]]:
+    """Summarize participant-level source predictions into public aggregate rows."""
+    required_columns = [split_column, participant_probability_column, n_windows_column]
+    if target_column is not None:
+        required_columns.append(target_column)
+    _validate_required_columns(participants, required_columns)
+
+    rows: list[dict[str, float | int | str]] = []
+    for split_name, split_df in participants.groupby(split_column, sort=True):
+        probabilities = pd.to_numeric(
+            split_df[participant_probability_column],
+            errors="coerce",
+        ).to_numpy(dtype=np.float64)
+        _validate_probabilities(probabilities)
+        n_windows = pd.to_numeric(split_df[n_windows_column], errors="coerce").to_numpy(dtype=np.float64)
+        if not np.isfinite(n_windows).all() or (n_windows < 0.0).any():
+            raise ValueError(f"{n_windows_column!r} must contain finite non-negative values.")
+
+        row: dict[str, float | int | str] = {
+            split_column: str(split_name),
+            "n": int(split_df.shape[0]),
+        }
+        if target_column is not None:
+            targets = pd.to_numeric(split_df[target_column], errors="coerce").to_numpy(dtype=np.float64)
+            if not np.isfinite(targets).all() or not np.isin(targets, [0.0, 1.0]).all():
+                raise ValueError(f"{target_column!r} must contain binary 0/1 values.")
+            events = int(np.sum(targets == 1.0))
+            row.update(
+                {
+                    "events": events,
+                    "non_events": int(split_df.shape[0] - events),
+                    "event_rate": _public_float(events / split_df.shape[0]),
+                }
+            )
+        row.update(
+            {
+                "n_windows": int(np.sum(n_windows)),
+                "mean_windows_per_participant": _public_float(np.mean(n_windows)),
+                f"{participant_probability_column}_mean": _public_float(np.mean(probabilities)),
+                f"{participant_probability_column}_std": _public_float(np.std(probabilities, ddof=0)),
+                f"{participant_probability_column}_min": _public_float(np.min(probabilities)),
+                f"{participant_probability_column}_max": _public_float(np.max(probabilities)),
+            }
+        )
+        rows.append(row)
+    return rows
+
+
 def _validate_required_columns(df: pd.DataFrame, columns: list[str]) -> None:
     missing = [column for column in columns if column not in df.columns]
     if missing:
@@ -123,3 +178,7 @@ def _validate_single_value_per_participant(
         return
     examples = [str(value) for value in invalid_ids.index[:5]]
     raise ValueError(f"Each participant must map to exactly one {label}; examples: {examples}.")
+
+
+def _public_float(value: float | np.floating) -> float:
+    return round(float(value), 12)

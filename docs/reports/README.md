@@ -21,3 +21,8 @@ The `motionage.reporting.tables` module provides small utilities for report repl
 
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.
+
+Source-prediction reports should use
+`motionage.analysis.motionage.summarize_source_predictions` to publish split-level
+counts, event rates, window totals, and probability summaries. Do not commit
+source prediction tables that contain one row per participant.

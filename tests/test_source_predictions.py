@@ -9,6 +9,7 @@ import pytest
 from motionage.analysis.motionage.source_predictions import (
     build_participant_source_predictions,
     logits_to_probabilities,
+    summarize_source_predictions,
 )
 
 
@@ -122,8 +123,97 @@ def test_build_participant_source_predictions_rejects_mixed_splits_or_targets() 
         )
 
 
+def test_summarize_source_predictions_returns_public_aggregate_rows() -> None:
+    participants = pd.DataFrame(
+        {
+            "SEQN": ["p1", "p2", "p3", "p4"],
+            "split": ["train", "train", "test", "test"],
+            "mortstat_60m": [0, 1, 0, 1],
+            "participant_probability": [0.2, 0.6, 0.1, 0.9],
+            "participant_logit": [-1.386, 0.405, -2.197, 2.197],
+            "n_windows": [2, 4, 3, 5],
+        }
+    )
+
+    rows = summarize_source_predictions(participants, target_column="mortstat_60m")
+
+    assert rows == [
+        {
+            "split": "test",
+            "n": 2,
+            "events": 1,
+            "non_events": 1,
+            "event_rate": 0.5,
+            "n_windows": 8,
+            "mean_windows_per_participant": 4.0,
+            "participant_probability_mean": 0.5,
+            "participant_probability_std": 0.4,
+            "participant_probability_min": 0.1,
+            "participant_probability_max": 0.9,
+        },
+        {
+            "split": "train",
+            "n": 2,
+            "events": 1,
+            "non_events": 1,
+            "event_rate": 0.5,
+            "n_windows": 6,
+            "mean_windows_per_participant": 3.0,
+            "participant_probability_mean": 0.4,
+            "participant_probability_std": 0.2,
+            "participant_probability_min": 0.2,
+            "participant_probability_max": 0.6,
+        },
+    ]
+    for row in rows:
+        assert "SEQN" not in row
+        assert "participant_logit" not in row
+
+
+def test_summarize_source_predictions_supports_targetless_local_replay() -> None:
+    participants = pd.DataFrame(
+        {
+            "sample_key": ["p1", "p2"],
+            "partition": ["train", "validation"],
+            "participant_probability": [0.25, 0.75],
+            "n_windows": [2, 6],
+        }
+    )
+
+    rows = summarize_source_predictions(
+        participants,
+        split_column="partition",
+        target_column=None,
+    )
+
+    assert rows == [
+        {
+            "partition": "train",
+            "n": 1,
+            "n_windows": 2,
+            "mean_windows_per_participant": 2.0,
+            "participant_probability_mean": 0.25,
+            "participant_probability_std": 0.0,
+            "participant_probability_min": 0.25,
+            "participant_probability_max": 0.25,
+        },
+        {
+            "partition": "validation",
+            "n": 1,
+            "n_windows": 6,
+            "mean_windows_per_participant": 6.0,
+            "participant_probability_mean": 0.75,
+            "participant_probability_std": 0.0,
+            "participant_probability_min": 0.75,
+            "participant_probability_max": 0.75,
+        },
+    ]
+
+
 def test_method_docs_include_source_prediction_boundary() -> None:
     text = Path(__file__).resolve().parents[1].joinpath("docs", "method.md").read_text()
+    reports_text = Path(__file__).resolve().parents[1].joinpath("docs", "reports", "README.md").read_text()
 
     assert "build_participant_source_predictions" in text
+    assert "summarize_source_predictions" in reports_text
     assert "synthetic or local run outputs only" in text
