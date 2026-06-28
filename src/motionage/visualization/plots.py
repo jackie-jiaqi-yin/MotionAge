@@ -16,6 +16,39 @@ DEFAULT_AGE_COLUMN = "RIDAGEYR"
 DEFAULT_INTENSITY_COLUMN = "intensity_mean"
 
 
+def build_public_metric_interval_frame(
+    data: pd.DataFrame,
+    *,
+    label_col: str = "model_label",
+    point_col: str = "estimate",
+    lower_col: str = "ci_lower",
+    upper_col: str = "ci_upper",
+    metric_label: str | None = None,
+) -> pd.DataFrame:
+    """Return an allowlisted aggregate interval frame for public figures."""
+    required = [label_col, point_col, lower_col, upper_col]
+    missing = [column for column in required if column not in data.columns]
+    if missing:
+        raise KeyError(f"Public metric interval frame input is missing required columns: {missing}")
+    if data.empty:
+        return pd.DataFrame(columns=["label", "estimate", "ci_lower", "ci_upper", "metric"])
+
+    frame = pd.DataFrame(
+        {
+            "label": data[label_col].astype(str),
+            "estimate": pd.to_numeric(data[point_col], errors="raise"),
+            "ci_lower": pd.to_numeric(data[lower_col], errors="raise"),
+            "ci_upper": pd.to_numeric(data[upper_col], errors="raise"),
+        }
+    )
+    if (frame["ci_lower"] > frame["estimate"]).any() or (
+        frame["estimate"] > frame["ci_upper"]
+    ).any():
+        raise ValueError("Confidence interval bounds must satisfy lower <= estimate <= upper.")
+    frame["metric"] = "" if metric_label is None else str(metric_label)
+    return frame[["label", "estimate", "ci_lower", "ci_upper", "metric"]]
+
+
 def plot_metric_interval_forest(
     data: pd.DataFrame,
     *,

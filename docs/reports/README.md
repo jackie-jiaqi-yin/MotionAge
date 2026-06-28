@@ -29,3 +29,7 @@ inputs, including aggregate confidence-interval forest plots and hourly
 activity trajectories by age group. These helpers operate on in-memory summary
 tables so report scripts do not need to hard-code private experiment paths or
 participant-level records.
+Use `build_public_metric_interval_frame` before interval forest plots when
+report artifacts include extra internal columns. It keeps only aggregate labels,
+point estimates, confidence bounds, and metric labels, excluding paths, raw
+predictions, and private resample draws.

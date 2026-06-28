@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import matplotlib
 import pandas as pd
 import pytest
@@ -7,9 +9,19 @@ import pytest
 matplotlib.use("Agg")
 
 from motionage.visualization.plots import (
+    build_public_metric_interval_frame,
     plot_intensity_timeseries_by_hour,
     plot_metric_interval_forest,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_reports_docs_describe_public_metric_interval_frame() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "build_public_metric_interval_frame" in reports_doc
+    assert "resample draws" in reports_doc
 
 
 def _make_hourly_plot_frame() -> pd.DataFrame:
@@ -158,3 +170,54 @@ def test_plot_metric_interval_forest_uses_aggregate_confidence_intervals() -> No
     assert len(ax.lines) >= 1
     assert any(line.get_linestyle() == "--" for line in ax.lines)
     assert ax.collections[0].get_offsets().shape[0] == 3
+
+
+def test_build_public_metric_interval_frame_keeps_only_aggregate_plot_fields() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "model_label": "Age",
+                "estimate": 0.781,
+                "ci_lower": 0.752,
+                "ci_upper": 0.808,
+                "metrics_path": "internal-run/metrics.csv",
+                "resample_draws": [0.75, 0.80],
+            },
+            {
+                "model_label": "MotionAge-FRC",
+                "estimate": 0.836,
+                "ci_lower": 0.812,
+                "ci_upper": 0.858,
+                "metrics_path": "internal-run/metrics.csv",
+                "resample_draws": [0.81, 0.86],
+            },
+        ]
+    )
+
+    public_frame = build_public_metric_interval_frame(
+        frame,
+        label_col="model_label",
+        point_col="estimate",
+        lower_col="ci_lower",
+        upper_col="ci_upper",
+        metric_label="AUROC",
+    )
+
+    assert public_frame.to_dict("records") == [
+        {
+            "label": "Age",
+            "estimate": 0.781,
+            "ci_lower": 0.752,
+            "ci_upper": 0.808,
+            "metric": "AUROC",
+        },
+        {
+            "label": "MotionAge-FRC",
+            "estimate": 0.836,
+            "ci_lower": 0.812,
+            "ci_upper": 0.858,
+            "metric": "AUROC",
+        },
+    ]
+    assert "metrics_path" not in public_frame.columns
+    assert "resample_draws" not in public_frame.columns
