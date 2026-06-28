@@ -17,6 +17,9 @@ weights and local run outputs remain outside git.
 `public_model_family_catalog` returns aggregate model-family rows for public
 summaries so readers can see the covered GRU, LSTM, Transformer, and static
 covariate variants without exposing checkpoints, weights, or private run paths.
+`public_model_architecture_summary` turns a public model config into allowlisted
+architecture metadata and parameter counts for report tables; it does not read
+checkpoint files, trained weights, or local run directories.
 
 ## Model Initialization
 

@@ -3,6 +3,7 @@
 from motionage.models.factory import (
     build_model,
     list_available_model_types,
+    public_model_architecture_summary,
     public_model_family_catalog,
     resolve_model_type,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "initialize_model_from_checkpoint",
     "initialize_model_from_config",
     "list_available_model_types",
+    "public_model_architecture_summary",
     "public_model_family_catalog",
     "resolve_model_type",
 ]

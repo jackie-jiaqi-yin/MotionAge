@@ -205,6 +205,42 @@ def public_model_family_catalog() -> tuple[dict[str, object], ...]:
     return tuple(dict(row) for row in _MODEL_FAMILY_CATALOG)
 
 
+def public_model_architecture_summary(config: dict[str, Any]) -> dict[str, object]:
+    """Return allowlisted architecture metadata for a model config."""
+    model_type = resolve_model_type(config)
+    model_cfg = config["model"]
+    params = _extract_model_params(model_cfg)
+    catalog_row = _model_catalog_row(model_type)
+    model = build_model(config)
+
+    row: dict[str, object] = {
+        "model_type": model_type,
+        "family": catalog_row["family"],
+        "public_label": catalog_row["public_label"],
+        "task": catalog_row["task"],
+        "sequence_encoder": catalog_row["sequence_encoder"],
+        "uses_static_covariates": catalog_row["uses_static_covariates"],
+        "prediction_mode": str(params.get("prediction_mode", "")),
+        "num_numeric_features": int(params.get("num_numeric_features", 0)),
+        "categorical_feature_count": len(params.get("categorical_cardinalities", [])),
+        "num_layers": int(params["num_layers"]),
+    }
+    if "hidden_size" in params:
+        row["hidden_size"] = int(params["hidden_size"])
+    if "d_model" in params:
+        row["d_model"] = int(params["d_model"])
+    if "nhead" in params:
+        row["nhead"] = int(params["nhead"])
+    if "max_seq_len" in params:
+        row["max_seq_len"] = int(params["max_seq_len"])
+
+    row["parameter_count"] = int(sum(parameter.numel() for parameter in model.parameters()))
+    row["trainable_parameter_count"] = int(
+        sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+    )
+    return row
+
+
 def resolve_model_type(config: dict[str, Any]) -> str:
     """Resolve and validate `model.type` from a config dictionary."""
     model_cfg = config.get("model")
@@ -227,3 +263,10 @@ def build_model(config: dict[str, Any]) -> nn.Module:
     model_type = resolve_model_type(config)
     params = _extract_model_params(model_cfg)
     return _MODEL_REGISTRY[model_type](params)
+
+
+def _model_catalog_row(model_type: str) -> dict[str, object]:
+    for row in _MODEL_FAMILY_CATALOG:
+        if row["model_type"] == model_type:
+            return dict(row)
+    raise KeyError(f"Model type {model_type!r} is missing from the public model catalog.")
