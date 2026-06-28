@@ -11,6 +11,7 @@ from motionage.artifacts import (
     ArtifactManifest,
     ArtifactSpec,
     load_artifact_manifest,
+    public_boundary_issues,
     validate_artifact_manifest,
 )
 
@@ -25,6 +26,7 @@ def test_artifact_policy_documents_manifest_summary_output() -> None:
     assert "required_artifacts" in artifact_policy
     assert "optional_artifacts" in artifact_policy
     assert "checksum_protected_artifacts" in artifact_policy
+    assert "public_boundary_issues" in artifact_policy
 
 
 def test_load_artifact_manifest_resolves_relative_paths_and_expected_checksums(tmp_path: Path) -> None:
@@ -122,6 +124,64 @@ def test_validate_artifact_manifest_reports_missing_and_checksum_failures(tmp_pa
     }
 
 
+def test_public_boundary_issues_flags_non_release_manifest_entries(tmp_path: Path) -> None:
+    manifest = ArtifactManifest(
+        version=1,
+        root=tmp_path,
+        artifacts=(
+            ArtifactSpec("raw_nhanes_export", Path("raw/participant_rows.parquet"), "Raw export.", None, True),
+            ArtifactSpec("model_checkpoint", Path("checkpoints/fold0.ckpt"), "Checkpoint.", None, True),
+            ArtifactSpec("reviewer_rebuttal", Path("docs/rebuttal/reply.md"), "Review reply.", None, False),
+            ArtifactSpec("private_path", Path("reports/private-summary.csv"), "Private summary.", None, False),
+        ),
+    )
+
+    issues = public_boundary_issues(manifest)
+
+    assert issues == {
+        "raw_nhanes_export": [
+            "artifact id contains blocked public-boundary term: raw",
+            "artifact path contains blocked public-boundary term: raw",
+            "artifact path contains blocked public-boundary term: participant",
+        ],
+        "model_checkpoint": [
+            "artifact id contains blocked public-boundary term: checkpoint",
+            "artifact path contains blocked public-boundary term: checkpoint",
+            "artifact path uses blocked artifact extension: .ckpt",
+        ],
+        "reviewer_rebuttal": [
+            "artifact id contains blocked public-boundary term: rebuttal",
+            "artifact id contains blocked public-boundary term: reviewer",
+            "artifact path contains blocked public-boundary term: rebuttal",
+        ],
+        "private_path": [
+            "artifact id contains blocked public-boundary term: private",
+            "artifact path contains blocked public-boundary term: private",
+        ],
+    }
+
+
+def test_validate_artifact_manifest_fails_public_boundary_issues(tmp_path: Path) -> None:
+    manifest = ArtifactManifest(
+        version=1,
+        root=tmp_path,
+        artifacts=(
+            ArtifactSpec("public_table", Path("reports/table1_inputs.csv"), "Synthetic aggregate table.", None, True),
+            ArtifactSpec("fold_checkpoint", Path("models/fold0.pt"), "Model weights.", None, False),
+        ),
+    )
+
+    report = validate_artifact_manifest(manifest)
+
+    assert report["ok"] is False
+    assert report["public_boundary_issues"] == {
+        "fold_checkpoint": [
+            "artifact id contains blocked public-boundary term: checkpoint",
+            "artifact path uses blocked artifact extension: .pt",
+        ]
+    }
+
+
 def test_validate_artifact_manifest_passes_complete_bundle(tmp_path: Path) -> None:
     table = tmp_path / "table.csv"
     table.write_text("metric,value\nauroc,0.8\n", encoding="utf-8")
@@ -147,6 +207,7 @@ def test_validate_artifact_manifest_passes_complete_bundle(tmp_path: Path) -> No
         "missing_required": [],
         "missing_optional": [],
         "checksum_mismatches": [],
+        "public_boundary_issues": {},
         "summary": {
             "total_artifacts": 1,
             "required_artifacts": 1,

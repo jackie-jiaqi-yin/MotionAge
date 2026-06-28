@@ -39,7 +39,7 @@ def test_validate_artifacts_cli_reports_complete_bundle(tmp_path: Path, capsys) 
         tmp_path,
         [
             {
-                "id": "participant_predictions",
+                "id": "aggregate_predictions",
                 "path": "predictions.csv",
                 "description": "Synthetic predictions.",
                 "required": True,
@@ -52,7 +52,7 @@ def test_validate_artifacts_cli_reports_complete_bundle(tmp_path: Path, capsys) 
     report = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert report["ok"] is True
-    assert report["present"] == ["participant_predictions"]
+    assert report["present"] == ["aggregate_predictions"]
     assert report["summary"] == {
         "total_artifacts": 1,
         "required_artifacts": 1,
@@ -66,7 +66,7 @@ def test_validate_artifacts_cli_fails_missing_required(tmp_path: Path, capsys) -
         tmp_path,
         [
             {
-                "id": "participant_predictions",
+                "id": "aggregate_predictions",
                 "path": "missing.csv",
                 "description": "Missing required artifact.",
                 "required": True,
@@ -79,7 +79,7 @@ def test_validate_artifacts_cli_fails_missing_required(tmp_path: Path, capsys) -
     report = json.loads(capsys.readouterr().out)
     assert exit_code == 1
     assert report["ok"] is False
-    assert report["missing_required"] == ["participant_predictions"]
+    assert report["missing_required"] == ["aggregate_predictions"]
     assert report["summary"] == {
         "total_artifacts": 1,
         "required_artifacts": 1,

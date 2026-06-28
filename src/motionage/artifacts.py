@@ -9,6 +9,19 @@ from typing import Any
 
 import yaml
 
+_BLOCKED_PUBLIC_BOUNDARY_TERMS = (
+    "raw",
+    "participant",
+    "subject",
+    "checkpoint",
+    "weight",
+    "rebuttal",
+    "reviewer",
+    "openreview",
+    "private",
+)
+_BLOCKED_ARTIFACT_EXTENSIONS = (".ckpt", ".pt", ".pth")
+
 
 @dataclass(frozen=True)
 class ArtifactSpec:
@@ -56,6 +69,7 @@ def validate_artifact_manifest(manifest: ArtifactManifest) -> dict[str, Any]:
     missing_required: list[str] = []
     missing_optional: list[str] = []
     checksum_mismatches: list[str] = []
+    boundary_issues = public_boundary_issues(manifest)
 
     for artifact in manifest.artifacts:
         path = artifact.resolve(manifest.root)
@@ -71,13 +85,38 @@ def validate_artifact_manifest(manifest: ArtifactManifest) -> dict[str, Any]:
             checksum_mismatches.append(artifact.artifact_id)
 
     return {
-        "ok": not missing_required and not checksum_mismatches,
+        "ok": not missing_required and not checksum_mismatches and not boundary_issues,
         "present": present,
         "missing_required": missing_required,
         "missing_optional": missing_optional,
         "checksum_mismatches": checksum_mismatches,
+        "public_boundary_issues": boundary_issues,
         "summary": summarize_artifact_manifest(manifest),
     }
+
+
+def public_boundary_issues(manifest: ArtifactManifest) -> dict[str, list[str]]:
+    """Return manifest entries that look unsafe for a public release manifest."""
+    issues: dict[str, list[str]] = {}
+    for artifact in manifest.artifacts:
+        artifact_issues: list[str] = []
+        normalized_id = artifact.artifact_id.lower()
+        normalized_path = artifact.path.as_posix().lower()
+
+        for term in _BLOCKED_PUBLIC_BOUNDARY_TERMS:
+            if term in normalized_id:
+                artifact_issues.append(f"artifact id contains blocked public-boundary term: {term}")
+        for term in _BLOCKED_PUBLIC_BOUNDARY_TERMS:
+            if term in normalized_path:
+                artifact_issues.append(f"artifact path contains blocked public-boundary term: {term}")
+
+        suffix = artifact.path.suffix.lower()
+        if suffix in _BLOCKED_ARTIFACT_EXTENSIONS:
+            artifact_issues.append(f"artifact path uses blocked artifact extension: {suffix}")
+
+        if artifact_issues:
+            issues[artifact.artifact_id] = artifact_issues
+    return issues
 
 
 def summarize_artifact_manifest(manifest: ArtifactManifest) -> dict[str, int]:

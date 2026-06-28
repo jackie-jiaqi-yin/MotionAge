@@ -23,13 +23,9 @@ Recommended artifact layout:
 artifacts/
   README.md
   checksums.sha256
-  predictions/
-    out_of_fold_predictions.parquet
-    participant_motionage.parquet
   reports/
-    table1_inputs.parquet
-    robustness_inputs.parquet
-  models/
+    table1_inputs.csv
+    robustness_inputs.csv
     model-card.md
 ```
 
@@ -59,9 +55,9 @@ Example:
 ```yaml
 version: 1
 artifacts:
-  - id: participant_predictions
-    path: predictions/out_of_fold_predictions.parquet
-    description: Participant-level out-of-fold probabilities.
+  - id: aggregate_table_inputs
+    path: reports/table1_inputs.csv
+    description: Aggregate synthetic inputs for reproducing report formatting.
     sha256: null
     required: true
 ```
@@ -72,3 +68,8 @@ in git. The JSON report also includes a `summary` block with
 `total_artifacts`, `required_artifacts`, `optional_artifacts`, and
 `checksum_protected_artifacts` counts so readers can inspect expected bundle
 coverage before downloading or validating private artifact contents.
+
+The report also includes `public_boundary_issues`. This field flags manifest
+entries whose ids or paths look unsafe for the public repository boundary,
+including raw data, participant or subject rows, checkpoints, model weight
+files, private paths, and reviewer/rebuttal/OpenReview materials.
