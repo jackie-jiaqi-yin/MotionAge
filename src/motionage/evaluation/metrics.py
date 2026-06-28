@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from numbers import Real
 
 import numpy as np
@@ -45,6 +45,31 @@ _PUBLIC_BINARY_EVALUATION_FIELDS = (
 )
 _PUBLIC_BINARY_EVALUATION_COUNT_FIELDS = {"n", "events", "non_events"}
 _REQUIRED_PUBLIC_BINARY_EVALUATION_FIELDS = ("n", "events", "non_events", "event_rate")
+_PUBLIC_BENCHMARK_SENSITIVITY_ALIASES = {
+    "analysis": ("analysis", "analysis_label", "label"),
+    "benchmark": ("benchmark", "benchmark_model", "right_model"),
+    "comparator": ("comparator", "model", "left_model"),
+    "n": ("n", "paired_n", "shared_paired_n", "complete_case_n"),
+    "events": ("events", "deaths"),
+    "benchmark_auroc": ("benchmark_auroc", "phenoage_auroc", "right_auroc"),
+    "comparator_auroc": ("comparator_auroc", "motionage_auroc", "left_auroc"),
+    "auroc_delta": ("auroc_delta", "paired_delta", "delta"),
+    "ci_lower": ("ci_lower", "ci95_lower"),
+    "ci_upper": ("ci_upper", "ci95_upper"),
+    "p_value": ("p_value", "p"),
+}
+_PUBLIC_BENCHMARK_SENSITIVITY_COUNT_FIELDS = {"n", "events"}
+_PUBLIC_BENCHMARK_SENSITIVITY_LABEL_FIELDS = {"analysis", "benchmark", "comparator"}
+_REQUIRED_PUBLIC_BENCHMARK_SENSITIVITY_FIELDS = (
+    "analysis",
+    "benchmark",
+    "comparator",
+    "n",
+    "events",
+    "benchmark_auroc",
+    "comparator_auroc",
+    "auroc_delta",
+)
 
 
 def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
@@ -99,6 +124,29 @@ def build_public_binary_evaluation_row(
     if missing:
         raise ValueError(f"Missing required public binary evaluation fields: {missing}.")
     return row
+
+
+def build_public_benchmark_sensitivity_table(
+    summaries: Sequence[Mapping[str, object]],
+    *,
+    benchmark: str | None = None,
+    comparator: str | None = None,
+) -> list[dict[str, str | float | int]]:
+    """Return allowlisted aggregate rows for public benchmark-sensitivity reports."""
+    rows: list[dict[str, str | float | int]] = []
+    for index, summary in enumerate(summaries):
+        row = _public_benchmark_sensitivity_row(
+            summary,
+            benchmark=benchmark,
+            comparator=comparator,
+        )
+        missing = [field for field in _REQUIRED_PUBLIC_BENCHMARK_SENSITIVITY_FIELDS if field not in row]
+        if missing:
+            raise ValueError(f"Benchmark sensitivity summary at index {index} is missing fields: {missing}.")
+        rows.append(row)
+    if not rows:
+        raise ValueError("At least one benchmark sensitivity summary is required.")
+    return rows
 
 
 def binary_target_summary(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
@@ -283,6 +331,53 @@ def _coerce_public_metric_value(field: str, value: object) -> float | int:
     if field in _PUBLIC_BINARY_EVALUATION_COUNT_FIELDS:
         if not numeric.is_integer():
             raise ValueError(f"Public binary evaluation count field {field!r} must be an integer.")
+        return int(numeric)
+    return numeric
+
+
+def _public_benchmark_sensitivity_row(
+    summary: Mapping[str, object],
+    *,
+    benchmark: str | None,
+    comparator: str | None,
+) -> dict[str, str | float | int]:
+    row: dict[str, str | float | int] = {}
+    for public_field, aliases in _PUBLIC_BENCHMARK_SENSITIVITY_ALIASES.items():
+        value = _first_present(summary, aliases)
+        if value is None:
+            if public_field == "benchmark" and benchmark is not None:
+                value = benchmark
+            elif public_field == "comparator" and comparator is not None:
+                value = comparator
+            else:
+                continue
+        if public_field in _PUBLIC_BENCHMARK_SENSITIVITY_LABEL_FIELDS:
+            row[public_field] = str(value)
+        else:
+            row[public_field] = _coerce_public_benchmark_sensitivity_value(public_field, value)
+    return row
+
+
+def _first_present(summary: Mapping[str, object], aliases: tuple[str, ...]) -> object | None:
+    for alias in aliases:
+        value = summary.get(alias)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _coerce_public_benchmark_sensitivity_value(field: str, value: object) -> float | int:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"Public benchmark sensitivity field {field!r} must be numeric.")
+
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise ValueError(f"Public benchmark sensitivity field {field!r} must be finite.")
+    if field in _PUBLIC_BENCHMARK_SENSITIVITY_COUNT_FIELDS:
+        if not numeric.is_integer():
+            raise ValueError(f"Public benchmark sensitivity count field {field!r} must be an integer.")
         return int(numeric)
     return numeric
 

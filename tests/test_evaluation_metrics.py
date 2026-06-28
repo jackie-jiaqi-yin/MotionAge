@@ -8,6 +8,7 @@ import pytest
 
 import motionage.evaluation.metrics as motionage_metrics
 from motionage.evaluation.metrics import (
+    build_public_benchmark_sensitivity_table,
     build_public_binary_evaluation_row,
     binary_precision_recall_curve_rows,
     binary_probability_metrics,
@@ -27,6 +28,14 @@ def test_method_docs_describe_aggregate_binary_evaluation_counts() -> None:
 
     for term in ("n", "events", "non_events", "event_rate"):
         assert term in method_doc
+
+
+def test_reports_docs_describe_public_benchmark_sensitivity_table() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "build_public_benchmark_sensitivity_table" in reports_doc
+    assert "complete-case sensitivity" in reports_doc
+    assert "benchmark/comparator labels" in reports_doc
 
 
 def test_binary_target_summary_reports_aggregate_counts_after_filtering() -> None:
@@ -99,6 +108,77 @@ def test_public_binary_evaluation_row_uses_allowlisted_aggregate_fields() -> Non
     assert "participant_id" not in row
     assert "prediction_path" not in row
     assert "positive_rate" not in row
+
+
+def test_public_benchmark_sensitivity_table_normalizes_phenoage_robustness_rows() -> None:
+    rows = [
+        {
+            "analysis": "fold-wise train-median imputation",
+            "benchmark": "PhenoAge",
+            "comparator": "MotionAge-FRC",
+            "paired_n": 5041,
+            "deaths": 527,
+            "phenoage_auroc": 0.8356,
+            "motionage_auroc": 0.8537,
+            "paired_delta": 0.0181,
+            "ci95_lower": 0.0047,
+            "ci95_upper": 0.0320,
+            "p_value": 0.0096,
+            "source_row": "hidden",
+            "prediction_path": "local/generated/phenoage_predictions.csv",
+        },
+        {
+            "analysis_label": "shared complete-case sensitivity",
+            "shared_paired_n": 4786,
+            "events": 472,
+            "benchmark_auroc": 0.8479,
+            "comparator_auroc": 0.8526,
+            "auroc_delta": 0.0047,
+            "ci_lower": -0.0087,
+            "ci_upper": 0.0180,
+            "p": 0.4942,
+            "artifact_path": "experiments/mortality_cv_60m/phenoage_benchmark_60m/complete_case/summary.csv",
+            "raw_predictions": [0.2, 0.8],
+        },
+    ]
+
+    table = build_public_benchmark_sensitivity_table(
+        rows,
+        benchmark="PhenoAge",
+        comparator="MotionAge-FRC",
+    )
+
+    assert table == [
+        {
+            "analysis": "fold-wise train-median imputation",
+            "benchmark": "PhenoAge",
+            "comparator": "MotionAge-FRC",
+            "n": 5041,
+            "events": 527,
+            "benchmark_auroc": 0.8356,
+            "comparator_auroc": 0.8537,
+            "auroc_delta": 0.0181,
+            "ci_lower": 0.0047,
+            "ci_upper": 0.0320,
+            "p_value": 0.0096,
+        },
+        {
+            "analysis": "shared complete-case sensitivity",
+            "benchmark": "PhenoAge",
+            "comparator": "MotionAge-FRC",
+            "n": 4786,
+            "events": 472,
+            "benchmark_auroc": 0.8479,
+            "comparator_auroc": 0.8526,
+            "auroc_delta": 0.0047,
+            "ci_lower": -0.0087,
+            "ci_upper": 0.0180,
+            "p_value": 0.4942,
+        },
+    ]
+    for private_field in ("source_row", "prediction_path", "artifact_path", "raw_predictions"):
+        assert private_field not in table[0]
+        assert private_field not in table[1]
 
 
 def test_binary_threshold_metrics_and_selection_use_validation_scores() -> None:
