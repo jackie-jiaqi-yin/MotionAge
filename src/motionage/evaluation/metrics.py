@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from numbers import Real
+
 import numpy as np
 from scipy.stats import somersd
 from sklearn.metrics import (
@@ -24,6 +27,51 @@ except Exception:  # pragma: no cover - optional in lightweight environments.
     lifelines_concordance_index = None
 
 
+_PUBLIC_BINARY_EVALUATION_FIELDS = (
+    "n",
+    "events",
+    "non_events",
+    "event_rate",
+    "auroc",
+    "auprc",
+    "logloss",
+    "brier",
+    "threshold",
+    "accuracy",
+    "balanced_accuracy",
+    "precision",
+    "recall",
+    "f1",
+)
+_PUBLIC_BINARY_EVALUATION_COUNT_FIELDS = {"n", "events", "non_events"}
+_REQUIRED_PUBLIC_BINARY_EVALUATION_FIELDS = ("n", "events", "non_events", "event_rate")
+_PUBLIC_BENCHMARK_SENSITIVITY_ALIASES = {
+    "analysis": ("analysis", "analysis_label", "label"),
+    "benchmark": ("benchmark", "benchmark_model", "right_model"),
+    "comparator": ("comparator", "model", "left_model"),
+    "n": ("n", "paired_n", "shared_paired_n", "complete_case_n"),
+    "events": ("events", "deaths"),
+    "benchmark_auroc": ("benchmark_auroc", "phenoage_auroc", "right_auroc"),
+    "comparator_auroc": ("comparator_auroc", "motionage_auroc", "left_auroc"),
+    "auroc_delta": ("auroc_delta", "paired_delta", "delta"),
+    "ci_lower": ("ci_lower", "ci95_lower"),
+    "ci_upper": ("ci_upper", "ci95_upper"),
+    "p_value": ("p_value", "p"),
+}
+_PUBLIC_BENCHMARK_SENSITIVITY_COUNT_FIELDS = {"n", "events"}
+_PUBLIC_BENCHMARK_SENSITIVITY_LABEL_FIELDS = {"analysis", "benchmark", "comparator"}
+_REQUIRED_PUBLIC_BENCHMARK_SENSITIVITY_FIELDS = (
+    "analysis",
+    "benchmark",
+    "comparator",
+    "n",
+    "events",
+    "benchmark_auroc",
+    "comparator_auroc",
+    "auroc_delta",
+)
+
+
 def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
     """Convert logits to probabilities with clipping for numerical stability."""
     logits_arr = np.asarray(logits, dtype=np.float64)
@@ -31,10 +79,11 @@ def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-logits_arr))
 
 
-def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float]:
+def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
     """Return threshold-free binary-classification metrics."""
     y_true_arr, y_prob_arr = _prepare_binary_inputs(y_true, y_prob)
-    positive_rate = float(np.mean(y_true_arr))
+    target_summary = binary_target_summary(y_true_arr, y_prob_arr)
+    positive_rate = target_summary["event_rate"]
 
     if np.unique(y_true_arr).size >= 2:
         auroc = float(roc_auc_score(y_true_arr, y_prob_arr))
@@ -44,11 +93,72 @@ def binary_probability_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> dict[s
         auprc = positive_rate
 
     return {
+        **target_summary,
         "auroc": auroc,
         "auprc": auprc,
         "logloss": float(log_loss(y_true_arr, y_prob_arr, labels=[0, 1])),
         "brier": float(brier_score_loss(y_true_arr, y_prob_arr)),
         "positive_rate": positive_rate,
+    }
+
+
+def build_public_binary_evaluation_row(
+    metrics: Mapping[str, object],
+    *,
+    model: str | None = None,
+    split: str | None = None,
+) -> dict[str, str | float | int]:
+    """Return an allowlisted aggregate binary-evaluation row for public reports."""
+    row: dict[str, str | float | int] = {}
+    if model is not None:
+        row["model"] = str(model)
+    if split is not None:
+        row["split"] = str(split)
+
+    for field in _PUBLIC_BINARY_EVALUATION_FIELDS:
+        if field not in metrics:
+            continue
+        row[field] = _coerce_public_metric_value(field, metrics[field])
+
+    missing = [field for field in _REQUIRED_PUBLIC_BINARY_EVALUATION_FIELDS if field not in row]
+    if missing:
+        raise ValueError(f"Missing required public binary evaluation fields: {missing}.")
+    return row
+
+
+def build_public_benchmark_sensitivity_table(
+    summaries: Sequence[Mapping[str, object]],
+    *,
+    benchmark: str | None = None,
+    comparator: str | None = None,
+) -> list[dict[str, str | float | int]]:
+    """Return allowlisted aggregate rows for public benchmark-sensitivity reports."""
+    rows: list[dict[str, str | float | int]] = []
+    for index, summary in enumerate(summaries):
+        row = _public_benchmark_sensitivity_row(
+            summary,
+            benchmark=benchmark,
+            comparator=comparator,
+        )
+        missing = [field for field in _REQUIRED_PUBLIC_BENCHMARK_SENSITIVITY_FIELDS if field not in row]
+        if missing:
+            raise ValueError(f"Benchmark sensitivity summary at index {index} is missing fields: {missing}.")
+        rows.append(row)
+    if not rows:
+        raise ValueError("At least one benchmark sensitivity summary is required.")
+    return rows
+
+
+def binary_target_summary(y_true: np.ndarray, y_prob: np.ndarray) -> dict[str, float | int]:
+    """Return aggregate binary target counts after finite-row filtering."""
+    y_true_arr, _ = _prepare_binary_inputs(y_true, y_prob)
+    events = int((y_true_arr == 1).sum())
+    n = int(y_true_arr.shape[0])
+    return {
+        "n": n,
+        "events": events,
+        "non_events": int(n - events),
+        "event_rate": float(events / n),
     }
 
 
@@ -207,6 +317,69 @@ def _c_index(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     if not np.isfinite(d_stat):
         return 0.5
     return float(np.clip((d_stat + 1.0) / 2.0, 0.0, 1.0))
+
+
+def _coerce_public_metric_value(field: str, value: object) -> float | int:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"Public binary evaluation field {field!r} must be numeric.")
+
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise ValueError(f"Public binary evaluation field {field!r} must be finite.")
+    if field in _PUBLIC_BINARY_EVALUATION_COUNT_FIELDS:
+        if not numeric.is_integer():
+            raise ValueError(f"Public binary evaluation count field {field!r} must be an integer.")
+        return int(numeric)
+    return numeric
+
+
+def _public_benchmark_sensitivity_row(
+    summary: Mapping[str, object],
+    *,
+    benchmark: str | None,
+    comparator: str | None,
+) -> dict[str, str | float | int]:
+    row: dict[str, str | float | int] = {}
+    for public_field, aliases in _PUBLIC_BENCHMARK_SENSITIVITY_ALIASES.items():
+        value = _first_present(summary, aliases)
+        if value is None:
+            if public_field == "benchmark" and benchmark is not None:
+                value = benchmark
+            elif public_field == "comparator" and comparator is not None:
+                value = comparator
+            else:
+                continue
+        if public_field in _PUBLIC_BENCHMARK_SENSITIVITY_LABEL_FIELDS:
+            row[public_field] = str(value)
+        else:
+            row[public_field] = _coerce_public_benchmark_sensitivity_value(public_field, value)
+    return row
+
+
+def _first_present(summary: Mapping[str, object], aliases: tuple[str, ...]) -> object | None:
+    for alias in aliases:
+        value = summary.get(alias)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _coerce_public_benchmark_sensitivity_value(field: str, value: object) -> float | int:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"Public benchmark sensitivity field {field!r} must be numeric.")
+
+    numeric = float(value)
+    if not np.isfinite(numeric):
+        raise ValueError(f"Public benchmark sensitivity field {field!r} must be finite.")
+    if field in _PUBLIC_BENCHMARK_SENSITIVITY_COUNT_FIELDS:
+        if not numeric.is_integer():
+            raise ValueError(f"Public benchmark sensitivity count field {field!r} must be an integer.")
+        return int(numeric)
+    return numeric
 
 
 def _prepare_binary_inputs(y_true: np.ndarray, y_prob: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
