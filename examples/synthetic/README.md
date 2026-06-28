@@ -20,4 +20,9 @@ The command writes:
 and column schema so downstream smoke tests can validate these examples without
 assuming they are real NHANES participant records or trained model artifacts.
 
+For programmatic checks, call `validate_synthetic_inputs(output_dir)` from the
+generator module. It verifies the public-boundary declaration, expected files,
+row counts, table columns, and metadata references before returning a compact
+manifest summary.
+
 The generated directory is for local use and should not be committed.

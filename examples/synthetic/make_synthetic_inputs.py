@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import yaml
+
+
+_EXPECTED_PUBLIC_BOUNDARY = {
+    "synthetic": True,
+    "contains_real_participants": False,
+    "contains_trained_weights": False,
+    "safe_for_public_smoke_tests": True,
+}
 
 
 def generate_synthetic_inputs(
@@ -86,12 +95,7 @@ def generate_synthetic_inputs(
         "participants": int(participants),
         "days": int(days),
         "seed": int(seed),
-        "public_boundary": {
-            "synthetic": True,
-            "contains_real_participants": False,
-            "contains_trained_weights": False,
-            "safe_for_public_smoke_tests": True,
-        },
+        "public_boundary": _EXPECTED_PUBLIC_BOUNDARY,
         "files": {
             "activity_mortstat": "activity_mortstat_joined.parquet",
             "covariates": "nhanes_mortality_covariates_l1.parquet",
@@ -123,6 +127,103 @@ def generate_synthetic_inputs(
         "metadata": metadata_path,
         "manifest": manifest_path,
     }
+
+
+def validate_synthetic_inputs(output_dir: Path | str) -> dict[str, Any]:
+    """Validate generated synthetic inputs and return the public manifest summary."""
+    output_path = Path(output_dir)
+    manifest_path = output_path / "manifest.yaml"
+    manifest = _load_yaml_mapping(manifest_path)
+
+    if manifest.get("public_boundary") != _EXPECTED_PUBLIC_BOUNDARY:
+        raise ValueError("Synthetic manifest public boundary is not safe for public release.")
+
+    files = manifest.get("files")
+    if not isinstance(files, dict):
+        raise ValueError("Synthetic manifest must include a files mapping.")
+
+    required_files = {
+        "activity_mortstat": files.get("activity_mortstat"),
+        "covariates": files.get("covariates"),
+        "metadata": files.get("metadata"),
+    }
+    resolved_files = {
+        name: _resolve_manifest_file(output_path, value, manifest_path=manifest_path)
+        for name, value in required_files.items()
+    }
+
+    activity = pd.read_parquet(resolved_files["activity_mortstat"])
+    covariates = pd.read_parquet(resolved_files["covariates"])
+    metadata = _load_yaml_mapping(resolved_files["metadata"])
+
+    row_counts = {
+        "activity_mortstat": int(len(activity)),
+        "covariates": int(len(covariates)),
+    }
+    if manifest.get("row_counts") != row_counts:
+        raise ValueError("Synthetic manifest row counts do not match generated files.")
+
+    columns = {
+        "activity_mortstat": activity.columns.tolist(),
+        "covariates": covariates.columns.tolist(),
+    }
+    if manifest.get("columns") != columns:
+        raise ValueError("Synthetic manifest columns do not match generated files.")
+
+    _validate_metadata(metadata, activity=activity, covariates=covariates)
+
+    return {
+        "participants": manifest.get("participants"),
+        "days": manifest.get("days"),
+        "seed": manifest.get("seed"),
+        "public_boundary": dict(manifest["public_boundary"]),
+        "files": {name: str(Path(value)) for name, value in required_files.items()},
+        "row_counts": row_counts,
+        "columns": columns,
+    }
+
+
+def _load_yaml_mapping(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected YAML mapping: {path}")
+    return data
+
+
+def _resolve_manifest_file(output_path: Path, value: Any, *, manifest_path: Path) -> Path:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{manifest_path} has an invalid file reference: {value!r}")
+    relative_path = Path(value)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"{manifest_path} file references must stay inside the output directory.")
+    resolved = output_path / relative_path
+    if not resolved.exists():
+        raise FileNotFoundError(resolved)
+    return resolved
+
+
+def _validate_metadata(
+    metadata: dict[str, Any],
+    *,
+    activity: pd.DataFrame,
+    covariates: pd.DataFrame,
+) -> None:
+    id_column = metadata.get("id_column")
+    target_column = metadata.get("target_column")
+    followup_month_column = metadata.get("followup_month_column")
+    numeric_columns = metadata.get("numeric_columns", [])
+    categorical_columns = metadata.get("categorical_columns", [])
+
+    if id_column not in activity.columns or id_column not in covariates.columns:
+        raise ValueError("Synthetic metadata id_column must be present in both generated tables.")
+    for column in (target_column, followup_month_column):
+        if column not in activity.columns:
+            raise ValueError(f"Synthetic metadata column is missing from activity table: {column}")
+    for column in [*numeric_columns, *categorical_columns]:
+        if column not in covariates.columns:
+            raise ValueError(f"Synthetic metadata covariate is missing: {column}")
 
 
 def main() -> None:

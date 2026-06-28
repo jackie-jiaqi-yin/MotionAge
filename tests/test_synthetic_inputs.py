@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -76,6 +77,39 @@ def test_generate_synthetic_inputs_manifest_declares_public_boundary_and_schema(
     }
     assert manifest["columns"]["activity_mortstat"] == activity.columns.tolist()
     assert manifest["columns"]["covariates"] == covariates.columns.tolist()
+
+
+def test_validate_synthetic_inputs_returns_public_manifest_summary(tmp_path: Path) -> None:
+    module = _load_generator()
+    module.generate_synthetic_inputs(tmp_path, participants=9, days=2, seed=23)
+
+    summary = module.validate_synthetic_inputs(tmp_path)
+
+    assert summary["participants"] == 9
+    assert summary["days"] == 2
+    assert summary["row_counts"] == {
+        "activity_mortstat": 9 * 2 * 24,
+        "covariates": 9,
+    }
+    assert summary["public_boundary"]["synthetic"] is True
+    assert summary["public_boundary"]["contains_real_participants"] is False
+    assert summary["public_boundary"]["contains_trained_weights"] is False
+    assert summary["files"] == {
+        "activity_mortstat": "activity_mortstat_joined.parquet",
+        "covariates": "nhanes_mortality_covariates_l1.parquet",
+        "metadata": "metadata_l1.yaml",
+    }
+
+
+def test_validate_synthetic_inputs_rejects_unsafe_public_boundary(tmp_path: Path) -> None:
+    module = _load_generator()
+    outputs = module.generate_synthetic_inputs(tmp_path, participants=9, days=1, seed=29)
+    manifest = yaml.safe_load(outputs["manifest"].read_text(encoding="utf-8"))
+    manifest["public_boundary"]["contains_real_participants"] = True
+    outputs["manifest"].write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="public boundary"):
+        module.validate_synthetic_inputs(tmp_path)
 
 
 def _load_generator():
