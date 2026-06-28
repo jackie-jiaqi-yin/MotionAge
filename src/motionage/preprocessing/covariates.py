@@ -47,6 +47,32 @@ def build_static_covariate_table(
     return table.reset_index(drop=True)
 
 
+def summarize_covariate_missingness(
+    df: pd.DataFrame,
+    *,
+    columns: list[str],
+) -> list[dict[str, str | int | float]]:
+    """Return aggregate missingness diagnostics for selected covariates."""
+    missing_columns = [column for column in columns if column not in df.columns]
+    if missing_columns:
+        raise KeyError(f"Missing covariate columns: {missing_columns}")
+
+    n = int(len(df))
+    rows: list[dict[str, str | int | float]] = []
+    for column in columns:
+        missing = int(df[column].isna().sum())
+        rows.append(
+            {
+                "column": column,
+                "n": n,
+                "observed": int(n - missing),
+                "missing": missing,
+                "missing_rate": float(missing / n) if n else 0.0,
+            }
+        )
+    return rows
+
+
 def fit_static_covariate_preprocessor(
     train_df: pd.DataFrame,
     *,

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
+import motionage.preprocessing.covariates as covariates
 import motionage.preprocessing.nhanes_features as nhanes_features
 from motionage.preprocessing.covariates import (
     build_static_covariate_table,
@@ -14,6 +17,15 @@ from motionage.preprocessing.mortality import (
     build_fixed_horizon_mortality_table,
     fixed_horizon_target_definition,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_preprocessing_docs_describe_covariate_missingness_diagnostics() -> None:
+    preprocessing_doc = (REPO_ROOT / "docs" / "preprocessing.md").read_text(encoding="utf-8")
+
+    for term in ("summarize_covariate_missingness", "missing_rate", "aggregate"):
+        assert term in preprocessing_doc
 
 
 def test_static_covariates_are_fit_on_training_rows_only() -> None:
@@ -64,6 +76,39 @@ def test_static_covariates_reject_duplicate_participant_rows() -> None:
             numeric_columns=["BMXBMI"],
             categorical_columns=["RIAGENDR"],
         )
+
+
+def test_summarize_covariate_missingness_reports_aggregate_column_rates() -> None:
+    assert hasattr(covariates, "summarize_covariate_missingness")
+    df = pd.DataFrame(
+        {
+            "SEQN": [1, 2, 3, 4],
+            "BMXBMI": [20.0, np.nan, 30.0, np.nan],
+            "RIAGENDR": [1, 2, np.nan, 2],
+        }
+    )
+
+    summary = covariates.summarize_covariate_missingness(
+        df,
+        columns=["BMXBMI", "RIAGENDR"],
+    )
+
+    assert summary == [
+        {
+            "column": "BMXBMI",
+            "n": 4,
+            "observed": 2,
+            "missing": 2,
+            "missing_rate": 0.5,
+        },
+        {
+            "column": "RIAGENDR",
+            "n": 4,
+            "observed": 3,
+            "missing": 1,
+            "missing_rate": 0.25,
+        },
+    ]
 
 
 def test_fixed_horizon_mortality_table_derives_60_month_binary_label() -> None:

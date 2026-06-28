@@ -27,3 +27,10 @@ inside the epoch.
 cutoff affect retained windows, retained participants, and retained events.
 These diagnostics are intended for preprocessing sensitivity reports before
 running expensive end-to-end model refits.
+
+## Covariate Missingness
+
+`summarize_covariate_missingness` reports aggregate diagnostics for selected
+static covariates: total rows, observed rows, missing rows, and `missing_rate`.
+The helper is intended for public missingness and robustness summaries without
+printing participant rows or split ID files.

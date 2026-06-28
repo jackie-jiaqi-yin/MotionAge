@@ -5,6 +5,7 @@ from motionage.preprocessing.covariates import (
     StaticCovariatePreprocessor,
     build_static_covariate_table,
     fit_static_covariate_preprocessor,
+    summarize_covariate_missingness,
     transform_static_covariates,
 )
 from motionage.preprocessing.mortality import (
@@ -28,6 +29,7 @@ __all__ = [
     "fit_static_covariate_preprocessor",
     "fixed_horizon_target_definition",
     "retained_window_count",
+    "summarize_covariate_missingness",
     "summarize_window_retention",
     "transform_static_covariates",
 ]
