@@ -89,6 +89,40 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
     }
 
 
+def test_validate_paper_models_cli_can_emit_summary_only_json(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--json",
+            "--summary-only",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert payload["study"]["study_id"] == "mortality_cv_primary_60m"
+    assert payload["output_filters"] == {"families": [], "model_ids": []}
+    assert payload["validation_requirements"] == {
+        "required_families": ["gru", "lstm", "transformer"]
+    }
+    assert payload["model_summary"] == {
+        "families": {"gru": 4, "lstm": 3, "transformer": 3},
+        "prediction_modes": {"late_fusion": 4, "none": 3, "residual": 3},
+        "covariates": {"disabled": 3, "enabled": 7},
+        "covariate_levels": {"1": 6, "age": 1, "none": 3},
+    }
+    assert payload["model_count"] == 10
+    assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
+    assert "model_ids_by_family" not in payload
+    assert "models" not in payload
+
+
 def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.CaptureFixture[str]) -> None:
     from motionage.cli import validate_paper_models_main
 
@@ -319,6 +353,37 @@ def test_validate_paper_models_cli_can_filter_markdown_by_family_and_model_id(
     assert "transformer_level1_residual" in captured.out
     assert "transformer_fitbit_only" not in captured.out
     assert "lstm_level1_residual" not in captured.out
+
+
+def test_validate_paper_models_cli_can_emit_summary_only_markdown(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--markdown",
+            "--summary-only",
+            "--model-id",
+            "transformer_level1_residual",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 0
+    assert captured.err == ""
+    assert "## Study" in captured.out
+    assert "## Output Filters" in captured.out
+    assert "## Validation Requirements" in captured.out
+    assert "## Model Summary" in captured.out
+    assert "## Models" not in captured.out
+    assert "| Family | Model ID |" not in captured.out
+    assert "| model_ids | transformer_level1_residual |" in captured.out
+    assert "| family | transformer | 1 |" in captured.out
+    assert "| prediction_mode | residual | 1 |" in captured.out
+    assert "| covariates | enabled | 1 |" in captured.out
+    assert "| covariate_level | 1 | 1 |" in captured.out
 
 
 def test_validate_paper_models_cli_returns_error_for_unknown_model_id(
@@ -565,6 +630,39 @@ def test_validate_paper_models_console_script_json_output() -> None:
     payload = json.loads(result.stdout)
     assert payload["model_count"] == 10
     assert payload["family_counts"]["transformer"] == 3
+
+
+def test_validate_paper_models_console_script_summary_only_json_output_file(
+    tmp_path: Path,
+) -> None:
+    import subprocess
+
+    output_path = tmp_path / "manifest_summary.json"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage-validate-paper-models",
+            "--json",
+            "--summary-only",
+            "--output",
+            str(output_path),
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert payload["model_count"] == 10
+    assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
+    assert "model_ids_by_family" not in payload
+    assert "models" not in payload
 
 
 def test_validate_paper_models_console_script_markdown_output() -> None:

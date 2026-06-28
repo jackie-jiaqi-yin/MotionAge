@@ -96,6 +96,12 @@ def _build_validate_paper_models_parser(
         help="emit a Markdown table of resolved paper model configs",
     )
     parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        dest="summary_only",
+        help="omit per-model details from JSON/Markdown output",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         dest="output_path",
@@ -138,6 +144,7 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
             validation_requirements,
             output_entries,
             family_counts,
+            include_models=not args.summary_only,
         )
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
@@ -147,6 +154,7 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
             output_filters,
             validation_requirements,
             output_entries,
+            include_models=not args.summary_only,
         )
         output = f"{markdown}\n"
     else:
@@ -242,12 +250,10 @@ def _paper_model_manifest_payload(
     validation_requirements: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
+    *,
+    include_models: bool = True,
 ) -> dict[str, object]:
-    model_ids_by_family: dict[str, list[str]] = {}
-    for entry in entries:
-        model_ids_by_family.setdefault(entry.family, []).append(entry.model_id)
-
-    return {
+    payload: dict[str, object] = {
         "manifest_path": str(manifest_path),
         "study": asdict(study),
         "output_filters": output_filters,
@@ -255,9 +261,14 @@ def _paper_model_manifest_payload(
         "model_summary": _paper_model_summary(entries),
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
-        "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
-        "models": [asdict(entry) for entry in entries],
     }
+    if include_models:
+        model_ids_by_family: dict[str, list[str]] = {}
+        for entry in entries:
+            model_ids_by_family.setdefault(entry.family, []).append(entry.model_id)
+        payload["model_ids_by_family"] = dict(sorted(model_ids_by_family.items()))
+        payload["models"] = [asdict(entry) for entry in entries]
+    return payload
 
 
 def _paper_model_manifest_markdown(
@@ -265,16 +276,18 @@ def _paper_model_manifest_markdown(
     output_filters: dict[str, list[str]],
     validation_requirements: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
+    *,
+    include_models: bool = True,
 ) -> str:
-    return "\n\n".join(
-        [
-            _paper_study_manifest_markdown(study),
-            _paper_model_output_filters_markdown(output_filters),
-            _paper_model_validation_requirements_markdown(validation_requirements),
-            _paper_model_summary_markdown(entries),
-            _paper_model_entries_markdown(entries),
-        ]
-    )
+    sections = [
+        _paper_study_manifest_markdown(study),
+        _paper_model_output_filters_markdown(output_filters),
+        _paper_model_validation_requirements_markdown(validation_requirements),
+        _paper_model_summary_markdown(entries),
+    ]
+    if include_models:
+        sections.append(_paper_model_entries_markdown(entries))
+    return "\n\n".join(sections)
 
 
 def _paper_study_manifest_markdown(study: PaperStudyManifest) -> str:
