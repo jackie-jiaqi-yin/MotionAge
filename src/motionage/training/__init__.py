@@ -33,7 +33,11 @@ from motionage.training.refit import (
     resolve_winner_trial,
 )
 from motionage.training.runtime import configure_torch_cpu_threads
-from motionage.training.scheduler import build_optimizer_and_scheduler
+from motionage.training.scheduler import (
+    build_optimizer_and_scheduler,
+    reset_plateau_scheduler_for_stage_transition,
+    restore_frozen_group_lrs,
+)
 from motionage.training.selection import initial_best_metric, metric_improved
 from motionage.training.summary import (
     build_fixed_epoch_training_summary,
@@ -82,6 +86,8 @@ __all__ = [
     "resolve_freeze_stage",
     "resolve_task_type",
     "resolve_winner_trial",
+    "reset_plateau_scheduler_for_stage_transition",
+    "restore_frozen_group_lrs",
     "scheduler_mode",
     "selection_metric_direction",
     "selection_metric_name",
