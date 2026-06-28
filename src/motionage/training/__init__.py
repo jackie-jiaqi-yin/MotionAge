@@ -1,5 +1,6 @@
 """Training runtime helpers for MotionAge experiments."""
 
+from motionage.training.checkpoint import build_checkpoint_payload
 from motionage.training.device import mps_diagnostics, resolve_device
 from motionage.training.evaluate import (
     aggregate_to_participant,
@@ -47,6 +48,7 @@ __all__ = [
     "aggregate_to_participant",
     "align_meta_to_predictions",
     "apply_freeze_stage",
+    "build_checkpoint_payload",
     "build_loss_function",
     "build_model_inputs",
     "build_optimizer_and_scheduler",
