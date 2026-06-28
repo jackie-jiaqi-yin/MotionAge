@@ -24,9 +24,11 @@ inside the epoch.
 ## Window Retention
 
 `summarize_window_retention` evaluates how sequence length and window coverage
-cutoff affect retained windows, retained participants, and retained events.
-These diagnostics are intended for preprocessing sensitivity reports before
-running expensive end-to-end model refits.
+cutoff affect eligible windows, retained windows, retained participants, and
+retained events. It also reports `window_retention_rate`,
+`participant_retention_rate`, and `event_retention_rate` so preprocessing
+sensitivity tables expose aggregate denominators before running expensive
+end-to-end model refits.
 
 ## Covariate Missingness
 

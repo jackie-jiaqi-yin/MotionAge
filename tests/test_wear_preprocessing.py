@@ -121,14 +121,18 @@ def test_summarize_window_retention_counts_windows_participants_and_events() -> 
     row_len4 = summary.loc[summary["seq_len"] == 4].iloc[0]
 
     assert row_len2["stride"] == 2
+    assert row_len2["eligible_windows"] == 4
     assert row_len2["retained_windows"] == 2
+    assert row_len2["window_retention_rate"] == 0.5
     assert row_len2["retained_participants"] == 2
     assert row_len2["retained_events"] == 1
     assert row_len2["eligible_participants"] == 2
     assert row_len2["eligible_events"] == 1
     assert row_len2["participant_retention_rate"] == 1.0
     assert row_len2["event_retention_rate"] == 1.0
+    assert row_len4["eligible_windows"] == 2
     assert row_len4["retained_windows"] == 1
+    assert row_len4["window_retention_rate"] == 0.5
     assert row_len4["retained_participants"] == 1
     assert row_len4["retained_events"] == 1
     assert row_len4["eligible_participants"] == 2

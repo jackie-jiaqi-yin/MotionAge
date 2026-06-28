@@ -202,10 +202,12 @@ def summarize_window_retention(
         seq_len = int(seq_len)
         stride = max(1, int(seq_len * float(stride_ratio)))
         for cutoff in coverage_cutoffs:
+            eligible_windows = 0
             retained_windows = 0
             retained_participants = 0
             retained_events = 0
             for _, attention, target in grouped:
+                eligible_windows += _eligible_window_count(attention, seq_len=seq_len, stride=stride)
                 count = retained_window_count(
                     attention,
                     seq_len=seq_len,
@@ -222,6 +224,7 @@ def summarize_window_retention(
                 if eligible_participants
                 else 0.0
             )
+            window_retention_rate = retained_windows / eligible_windows if eligible_windows else 0.0
             event_retention_rate = (
                 retained_events / eligible_events
                 if eligible_events
@@ -232,7 +235,9 @@ def summarize_window_retention(
                     "seq_len": int(seq_len),
                     "coverage_cutoff": float(cutoff),
                     "stride": int(stride),
+                    "eligible_windows": int(eligible_windows),
                     "retained_windows": int(retained_windows),
+                    "window_retention_rate": float(window_retention_rate),
                     "retained_participants": int(retained_participants),
                     "retained_events": int(retained_events),
                     "eligible_participants": eligible_participants,
@@ -242,6 +247,12 @@ def summarize_window_retention(
                 }
             )
     return pd.DataFrame(rows)
+
+
+def _eligible_window_count(attention: np.ndarray, *, seq_len: int, stride: int) -> int:
+    if attention.size < seq_len:
+        return 0
+    return int(((attention.size - int(seq_len)) // int(stride)) + 1)
 
 
 def _valid_nonwear_segment(
