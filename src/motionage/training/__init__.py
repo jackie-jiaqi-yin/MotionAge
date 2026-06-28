@@ -22,6 +22,7 @@ from motionage.training.log_rows import (
     training_log_fieldnames,
     write_training_log_csv,
 )
+from motionage.training.metrics import build_train_epoch_metrics
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.optimizer import (
     OptimizerGroupSummary,
@@ -68,6 +69,7 @@ __all__ = [
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
+    "build_train_epoch_metrics",
     "build_training_log_row",
     "build_training_summary",
     "build_trainval_refit_splits",
