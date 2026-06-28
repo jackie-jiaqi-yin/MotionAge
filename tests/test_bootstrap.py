@@ -159,6 +159,49 @@ def test_public_bootstrap_interval_table_normalizes_multiple_summaries() -> None
     assert "local_resample_path" not in table[1]
 
 
+def test_public_bootstrap_interval_table_preserves_public_context_labels_only() -> None:
+    summaries = [
+        {
+            "analysis": "complete-case sensitivity",
+            "population": "age_ge_40",
+            "metric": "paired AUROC delta",
+            "comparison": "MotionAge - PhenoAge",
+            "observed_auc_delta": 0.018,
+            "bootstrap_mean_delta": 0.017,
+            "ci95_lower": 0.004,
+            "ci95_upper": 0.032,
+            "ci_level": 0.95,
+            "n_resamples_requested": 2000,
+            "valid_resamples": 1998,
+            "private_note": "do not publish",
+            "local_artifact_path": "generated/bootstrap.csv",
+            "raw_resamples": [0.004, 0.032],
+        }
+    ]
+
+    table = public_bootstrap_interval_table(summaries, resampling_unit="participant")
+
+    assert table == [
+        {
+            "analysis": "complete-case sensitivity",
+            "population": "age_ge_40",
+            "metric": "paired AUROC delta",
+            "comparison": "MotionAge - PhenoAge",
+            "estimate": 0.018,
+            "bootstrap_mean": 0.017,
+            "ci_lower": 0.004,
+            "ci_upper": 0.032,
+            "ci_level": 0.95,
+            "n_resamples_requested": 2000,
+            "valid_resamples": 1998,
+            "resampling_unit": "participant",
+        }
+    ]
+    assert "private_note" not in table[0]
+    assert "local_artifact_path" not in table[0]
+    assert "raw_resamples" not in table[0]
+
+
 def test_public_paired_auc_interval_table_summarizes_public_comparison_rows() -> None:
     paired = pd.DataFrame(
         {

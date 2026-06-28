@@ -27,6 +27,7 @@ _BOOTSTRAP_MEAN_KEYS = ("bootstrap_mean_auroc", "bootstrap_mean_delta", "mean")
 _CI_LOWER_KEYS = ("ci_lower", "ci95_lower")
 _CI_UPPER_KEYS = ("ci_upper", "ci95_upper")
 _VALID_RESAMPLE_KEYS = ("n_resamples_valid", "valid_resamples")
+_PUBLIC_CONTEXT_FIELDS = ("analysis", "population")
 
 
 def bootstrap_binary_auroc(
@@ -94,7 +95,13 @@ def public_bootstrap_interval_row(
     resampling_unit: str | None = None,
 ) -> dict[str, str | float | int | bool]:
     """Return an allowlisted bootstrap interval row for public reports."""
-    row: dict[str, str | float | int | bool] = {"metric": str(metric)}
+    row: dict[str, str | float | int | bool] = {}
+    for field in _PUBLIC_CONTEXT_FIELDS:
+        value = summary.get(field)
+        if value not in (None, ""):
+            row[field] = str(value)
+
+    row["metric"] = str(metric)
     if comparison is not None:
         row["comparison"] = str(comparison)
 
