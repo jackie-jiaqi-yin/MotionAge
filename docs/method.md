@@ -10,7 +10,11 @@ The first-stage model predicts fixed-horizon mortality from minute-level acceler
 - LSTM,
 - Transformer.
 
-Covariate variants include late-fusion and residual-fusion designs. These implementations will be added in dedicated model PRs.
+Covariate variants include late-fusion and residual-fusion designs for the same
+paper-visible model families.
+`public_model_family_catalog` returns aggregate model-family rows for public
+summaries so readers can see the covered GRU, LSTM, Transformer, and static
+covariate variants without exposing checkpoints, weights, or private run paths.
 
 ## Model Initialization
 

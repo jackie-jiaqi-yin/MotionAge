@@ -137,10 +137,72 @@ _MODEL_REGISTRY: dict[str, ModelBuilder] = {
     "transformer_covariates_binary": _build_transformer_covariates_binary,
 }
 
+_MODEL_FAMILY_CATALOG: tuple[dict[str, object], ...] = (
+    {
+        "model_type": "gru_binary",
+        "family": "GRU",
+        "public_label": "GRU",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "gru_covariates_binary",
+        "family": "GRU",
+        "public_label": "GRU + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+    {
+        "model_type": "lstm_binary",
+        "family": "LSTM",
+        "public_label": "LSTM",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "lstm_covariates_binary",
+        "family": "LSTM",
+        "public_label": "LSTM + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+    {
+        "model_type": "transformer_binary",
+        "family": "Transformer",
+        "public_label": "Transformer",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_transformer",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "transformer_covariates_binary",
+        "family": "Transformer",
+        "public_label": "Transformer + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_transformer",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+)
+
 
 def list_available_model_types() -> tuple[str, ...]:
     """Return sorted available model type keys."""
     return tuple(sorted(_MODEL_REGISTRY.keys()))
+
+
+def public_model_family_catalog() -> tuple[dict[str, object], ...]:
+    """Return public-safe model family rows for publication-facing summaries."""
+    return tuple(dict(row) for row in _MODEL_FAMILY_CATALOG)
 
 
 def resolve_model_type(config: dict[str, Any]) -> str:

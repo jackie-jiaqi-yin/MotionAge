@@ -14,6 +14,7 @@ from motionage.models import (
     MaskedTransformerCovariateClassifier,
     build_model,
     list_available_model_types,
+    public_model_family_catalog,
 )
 
 
@@ -112,6 +113,29 @@ def test_factory_lists_explicit_binary_model_types() -> None:
         "transformer_binary",
         "transformer_covariates_binary",
     )
+
+
+def test_public_model_family_catalog_covers_paper_visible_variants() -> None:
+    rows = public_model_family_catalog()
+
+    assert tuple(row["model_type"] for row in rows) == list_available_model_types()
+    assert {row["family"] for row in rows} == {"GRU", "LSTM", "Transformer"}
+    assert {row["public_label"] for row in rows} == {
+        "GRU",
+        "GRU + covariates",
+        "LSTM",
+        "LSTM + covariates",
+        "Transformer",
+        "Transformer + covariates",
+    }
+    assert all(row["task"] == "fixed_horizon_mortality_binary_classification" for row in rows)
+    assert all("checkpoint" not in row for row in rows)
+    assert all("path" not in row for row in rows)
+    assert all("weights" not in row for row in rows)
+
+    covariate_rows = [row for row in rows if row["uses_static_covariates"]]
+    assert covariate_rows
+    assert all(row["covariate_prediction_modes"] == ("late_fusion", "residual") for row in covariate_rows)
 
 
 @pytest.mark.parametrize(
