@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from motionage.reporting.tables import format_mean_sd
 
 
 MORTALITY_CV_METRIC_COLUMNS = (
@@ -96,6 +99,41 @@ def summarize_mortality_cv_fold_metrics(frame: pd.DataFrame) -> pd.DataFrame:
         ["is_official", "test_auprc_mean"],
         ascending=[False, False],
     ).reset_index(drop=True)
+
+
+def build_mortality_cv_summary_table(
+    summary: pd.DataFrame,
+    *,
+    metric_columns: Sequence[str] = MORTALITY_CV_METRIC_COLUMNS,
+    digits: int = 3,
+    missing: str = "",
+) -> pd.DataFrame:
+    """Format aggregate mortality-CV summaries for publication tables."""
+    metric_columns = list(metric_columns)
+    base_columns = ["model_id", "stage2_experiment_id", "fold_count", "is_official"]
+    output_columns = [*base_columns, *metric_columns]
+    if summary.empty:
+        return pd.DataFrame(columns=output_columns)
+
+    required_metric_columns = [
+        column
+        for metric in metric_columns
+        for column in (f"{metric}_mean", f"{metric}_std")
+    ]
+    _require_columns(summary, [*base_columns, *required_metric_columns])
+
+    rows: list[dict[str, object]] = []
+    for row in summary.to_dict(orient="records"):
+        table_row: dict[str, object] = {column: row[column] for column in base_columns}
+        for metric in metric_columns:
+            table_row[metric] = format_mean_sd(
+                row[f"{metric}_mean"],
+                row[f"{metric}_std"],
+                digits=digits,
+                missing=missing,
+            )
+        rows.append(table_row)
+    return pd.DataFrame(rows, columns=output_columns)
 
 
 def _require_columns(frame: pd.DataFrame, columns: list[str]) -> None:

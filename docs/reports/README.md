@@ -19,5 +19,9 @@ The `motionage.reporting.tables` module provides small utilities for report repl
 - format table entries as `mean +/- SD`,
 - render lower-triangle paired confidence-interval matrices.
 
+The `motionage.reporting.mortality_cv` module provides mortality-CV report
+helpers that collect fold summaries, aggregate official and secondary feature
+sets, and format aggregate summary rows for publication tables.
+
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.

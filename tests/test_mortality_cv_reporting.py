@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from motionage.reporting.mortality_cv import (
+    build_mortality_cv_summary_table,
     collect_fold_metrics,
     summarize_mortality_cv_fold_metrics,
 )
@@ -108,3 +109,61 @@ def test_summarize_mortality_cv_fold_metrics_orders_official_rows_first() -> Non
     assert round(official_row["test_auroc_mean"], 4) == 0.8100
     assert round(official_row["test_auprc_mean"], 4) == 0.3050
     assert round(official_row["test_logloss_mean"], 4) == 0.4950
+
+
+def test_build_mortality_cv_summary_table_formats_aggregate_metrics() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "model_id": "gru_fitbit_only",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.81234,
+                "test_auroc_std": 0.01567,
+                "test_auprc_mean": 0.31234,
+                "test_auprc_std": 0.02567,
+                "test_logloss_mean": 0.48765,
+                "test_logloss_std": 0.01012,
+                "test_brier_mean": 0.18123,
+                "test_brier_std": 0.00567,
+            },
+            {
+                "model_id": "transformer_level1_latefusion",
+                "stage2_experiment_id": "stage1_probability",
+                "fold_count": 5,
+                "is_official": False,
+                "test_auroc_mean": 0.79876,
+                "test_auroc_std": 0.01432,
+                "test_auprc_mean": 0.29876,
+                "test_auprc_std": 0.02432,
+                "test_logloss_mean": 0.50123,
+                "test_logloss_std": 0.01234,
+                "test_brier_mean": 0.19123,
+                "test_brier_std": 0.00678,
+            },
+        ]
+    )
+
+    table = build_mortality_cv_summary_table(summary, digits=3)
+
+    assert table.columns.tolist() == [
+        "model_id",
+        "stage2_experiment_id",
+        "fold_count",
+        "is_official",
+        "test_auroc",
+        "test_auprc",
+        "test_logloss",
+        "test_brier",
+    ]
+    assert table.iloc[0].to_dict() == {
+        "model_id": "gru_fitbit_only",
+        "stage2_experiment_id": "motionage_accel",
+        "fold_count": 5,
+        "is_official": True,
+        "test_auroc": "0.812 +/- 0.016",
+        "test_auprc": "0.312 +/- 0.026",
+        "test_logloss": "0.488 +/- 0.010",
+        "test_brier": "0.181 +/- 0.006",
+    }
