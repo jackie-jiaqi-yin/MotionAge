@@ -224,6 +224,9 @@ def public_model_architecture_summary(config: dict[str, Any]) -> dict[str, objec
         "num_numeric_features": int(params.get("num_numeric_features", 0)),
         "categorical_feature_count": len(params.get("categorical_cardinalities", [])),
         "num_layers": int(params["num_layers"]),
+        "dropout": float(params["dropout"]),
+        "hour_emb_dim": int(params["hour_emb_dim"]),
+        "day_emb_dim": int(params["day_emb_dim"]),
     }
     if "hidden_size" in params:
         row["hidden_size"] = int(params["hidden_size"])
@@ -231,6 +234,10 @@ def public_model_architecture_summary(config: dict[str, Any]) -> dict[str, objec
         row["d_model"] = int(params["d_model"])
     if "nhead" in params:
         row["nhead"] = int(params["nhead"])
+    if "dim_feedforward" in params:
+        row["dim_feedforward"] = int(params["dim_feedforward"])
+    if "intensity_proj_dim" in params:
+        row["intensity_proj_dim"] = int(params["intensity_proj_dim"])
     if "max_seq_len" in params:
         row["max_seq_len"] = int(params["max_seq_len"])
 

@@ -155,8 +155,13 @@ def test_public_model_architecture_summary_reports_allowlisted_counts() -> None:
         "num_numeric_features",
         "categorical_feature_count",
         "num_layers",
+        "dropout",
+        "hour_emb_dim",
+        "day_emb_dim",
         "d_model",
         "nhead",
+        "dim_feedforward",
+        "intensity_proj_dim",
         "max_seq_len",
         "parameter_count",
         "trainable_parameter_count",
@@ -170,8 +175,13 @@ def test_public_model_architecture_summary_reports_allowlisted_counts() -> None:
     assert summary["num_numeric_features"] == 3
     assert summary["categorical_feature_count"] == 2
     assert summary["num_layers"] == 1
+    assert summary["dropout"] == 0.0
+    assert summary["hour_emb_dim"] == 4
+    assert summary["day_emb_dim"] == 2
     assert summary["d_model"] == 16
     assert summary["nhead"] == 4
+    assert summary["dim_feedforward"] == 32
+    assert summary["intensity_proj_dim"] == 4
     assert summary["max_seq_len"] == 16
     assert summary["parameter_count"] > 0
     assert summary["trainable_parameter_count"] == summary["parameter_count"]
