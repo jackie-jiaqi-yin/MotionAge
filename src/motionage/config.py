@@ -109,6 +109,23 @@ def public_config_diff(
     return rows
 
 
+def public_config_rows(
+    config: dict[str, Any],
+    *,
+    redact_paths: bool = True,
+) -> list[dict[str, Any]]:
+    """Return public-safe flattened config rows for report tables."""
+    snapshot = public_config_snapshot(config, redact_paths=redact_paths)
+    leaves = _flatten_config_leaves(snapshot)
+
+    rows: list[dict[str, Any]] = []
+    for key in sorted(leaves):
+        if redact_paths and _is_path_like_config_path(key):
+            continue
+        rows.append({"key": key, "value": copy.deepcopy(leaves[key])})
+    return rows
+
+
 _MISSING_CONFIG_VALUE = object()
 
 

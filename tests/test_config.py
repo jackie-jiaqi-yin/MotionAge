@@ -9,6 +9,7 @@ from motionage.config import (
     apply_overrides,
     load_yaml_config,
     public_config_diff,
+    public_config_rows,
     public_config_snapshot,
     resolve_config,
     save_resolved_config,
@@ -240,6 +241,46 @@ def test_public_config_diff_reports_only_public_reproducibility_changes() -> Non
     ]
     assert "local-runs" not in str(diff)
     assert "local-artifacts" not in str(diff)
+
+
+def test_public_config_rows_flatten_reproducibility_knobs_without_paths() -> None:
+    config = {
+        "experiment": {
+            "name": "mortality_cv_primary",
+            "output_dir": "local-runs/primary",
+            "init_checkpoint": "local-checkpoints/fold0.pt",
+        },
+        "data": {
+            "input_path": "local-data/features.parquet",
+            "feature_columns": ["intensity_mean", "MIMS"],
+        },
+        "model": {
+            "type": "lstm_covariates_binary",
+            "hidden_size": 128,
+        },
+        "mapping": {
+            "fit_partitions": ["train"],
+            "clip_eps": 0.0001,
+            "weighted_fit": True,
+            "clamp_output_to_fit_age_range": False,
+        },
+    }
+
+    rows = public_config_rows(config)
+
+    assert rows == [
+        {"key": "data.feature_columns", "value": ["intensity_mean", "MIMS"]},
+        {"key": "experiment.name", "value": "mortality_cv_primary"},
+        {"key": "mapping.clamp_output_to_fit_age_range", "value": False},
+        {"key": "mapping.clip_eps", "value": 0.0001},
+        {"key": "mapping.fit_partitions", "value": ["train"]},
+        {"key": "mapping.weighted_fit", "value": True},
+        {"key": "model.hidden_size", "value": 128},
+        {"key": "model.type", "value": "lstm_covariates_binary"},
+    ]
+    assert "local-runs" not in str(rows)
+    assert "local-checkpoints" not in str(rows)
+    assert "local-data" not in str(rows)
 
 
 def test_save_resolved_config_writes_yaml(tmp_path: Path) -> None:
