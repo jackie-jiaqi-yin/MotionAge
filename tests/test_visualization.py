@@ -9,6 +9,7 @@ import pytest
 matplotlib.use("Agg")
 
 from motionage.visualization.plots import (
+    build_public_lower_triangle_ci_heatmap_frame,
     build_public_motionage_mapping_frame,
     build_public_metric_interval_frame,
     plot_intensity_timeseries_by_hour,
@@ -31,6 +32,13 @@ def test_reports_docs_describe_motionage_mapping_diagnostics_boundary() -> None:
 
     assert "build_public_motionage_mapping_frame" in reports_doc
     assert "age-bin mapping diagnostics" in reports_doc
+
+
+def test_reports_docs_describe_lower_triangle_ci_heatmap_frame() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "build_public_lower_triangle_ci_heatmap_frame" in reports_doc
+    assert "lower-triangle paired confidence-interval heatmaps" in reports_doc
 
 
 def _make_hourly_plot_frame() -> pd.DataFrame:
@@ -230,6 +238,60 @@ def test_build_public_metric_interval_frame_keeps_only_aggregate_plot_fields() -
     ]
     assert "metrics_path" not in public_frame.columns
     assert "resample_draws" not in public_frame.columns
+
+
+def test_build_public_lower_triangle_ci_heatmap_frame_keeps_only_aggregate_cells() -> None:
+    paired = pd.DataFrame(
+        [
+            {
+                "left_label": "MotionAge-FRC",
+                "right_label": "PhenoAge",
+                "observed_auc_delta": 0.018131,
+                "ci95_lower": 0.004671,
+                "ci95_upper": 0.031983,
+                "source_path": "internal-run/pairs.csv",
+                "resample_draws": [0.01, 0.02],
+            },
+            {
+                "left_label": "Age",
+                "right_label": "MotionAge-FRC",
+                "observed_auc_delta": -0.052155,
+                "ci95_lower": -0.066401,
+                "ci95_upper": -0.038438,
+                "source_path": "internal-run/pairs.csv",
+                "resample_draws": [-0.06, -0.04],
+            },
+        ]
+    )
+
+    public_frame = build_public_lower_triangle_ci_heatmap_frame(
+        paired,
+        labels=["Age", "PhenoAge", "MotionAge-FRC"],
+    )
+
+    assert public_frame.to_dict("records") == [
+        {
+            "row_label": "MotionAge-FRC",
+            "column_label": "Age",
+            "delta": 0.052155,
+            "ci_lower": 0.038438,
+            "ci_upper": 0.066401,
+            "significant": True,
+            "annotation": "0.0522 (0.0384, 0.0664)*",
+        },
+        {
+            "row_label": "MotionAge-FRC",
+            "column_label": "PhenoAge",
+            "delta": 0.018131,
+            "ci_lower": 0.004671,
+            "ci_upper": 0.031983,
+            "significant": True,
+            "annotation": "0.0181 (0.0047, 0.0320)*",
+        },
+    ]
+    assert "source_path" not in public_frame.columns
+    assert "resample_draws" not in public_frame.columns
+    assert not ((public_frame["row_label"] == "Age") & (public_frame["column_label"] == "MotionAge-FRC")).any()
 
 
 def test_build_public_motionage_mapping_frame_keeps_only_aggregate_plot_fields() -> None:

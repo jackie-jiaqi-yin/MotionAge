@@ -60,6 +60,73 @@ def build_public_metric_interval_frame(
     return frame[["label", "estimate", "ci_lower", "ci_upper", "metric"]]
 
 
+def build_public_lower_triangle_ci_heatmap_frame(
+    data: pd.DataFrame,
+    *,
+    labels: Sequence[str],
+    left_label_col: str = "left_label",
+    right_label_col: str = "right_label",
+    delta_col: str = "observed_auc_delta",
+    lower_col: str = "ci95_lower",
+    upper_col: str = "ci95_upper",
+    digits: int = 4,
+    include_significance_star: bool = True,
+) -> pd.DataFrame:
+    """Return allowlisted lower-triangle CI cells for public heatmap figures."""
+    required = [left_label_col, right_label_col, delta_col, lower_col, upper_col]
+    missing = [column for column in required if column not in data.columns]
+    if missing:
+        raise KeyError(f"Public lower-triangle CI frame input is missing required columns: {missing}")
+
+    label_order = [str(label) for label in labels]
+    if len(set(label_order)) != len(label_order):
+        raise ValueError("Lower-triangle CI labels must be unique.")
+
+    lookup = _paired_interval_lookup(
+        data,
+        left_label_col=left_label_col,
+        right_label_col=right_label_col,
+        delta_col=delta_col,
+        lower_col=lower_col,
+        upper_col=upper_col,
+    )
+    rows: list[dict[str, Any]] = []
+    for row_index, row_label in enumerate(label_order):
+        for column_label in label_order[:row_index]:
+            interval = _lookup_interval_or_reverse(lookup, row_label, column_label)
+            if interval is None:
+                continue
+            significant = interval["ci_lower"] > 0.0 or interval["ci_upper"] < 0.0
+            star = "*" if include_significance_star and significant else ""
+            rows.append(
+                {
+                    "row_label": row_label,
+                    "column_label": column_label,
+                    "delta": interval["delta"],
+                    "ci_lower": interval["ci_lower"],
+                    "ci_upper": interval["ci_upper"],
+                    "significant": significant,
+                    "annotation": (
+                        f"{interval['delta']:.{digits}f} "
+                        f"({interval['ci_lower']:.{digits}f}, {interval['ci_upper']:.{digits}f}){star}"
+                    ),
+                }
+            )
+
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "row_label",
+            "column_label",
+            "delta",
+            "ci_lower",
+            "ci_upper",
+            "significant",
+            "annotation",
+        ],
+    )
+
+
 def plot_metric_interval_forest(
     data: pd.DataFrame,
     *,
@@ -602,6 +669,52 @@ def _validate_probability_columns(
     for column in columns:
         if ((data[column] < 0.0) | (data[column] > 1.0)).any():
             raise ValueError(f"{frame_name} column '{column}' must contain probabilities in [0, 1].")
+
+
+def _paired_interval_lookup(
+    data: pd.DataFrame,
+    *,
+    left_label_col: str,
+    right_label_col: str,
+    delta_col: str,
+    lower_col: str,
+    upper_col: str,
+) -> dict[tuple[str, str], dict[str, float]]:
+    lookup: dict[tuple[str, str], dict[str, float]] = {}
+    for row in data.to_dict("records"):
+        key = (str(row[left_label_col]), str(row[right_label_col]))
+        if key in lookup:
+            raise ValueError(f"Duplicate paired interval row for {key[0]} vs {key[1]}.")
+        interval = {
+            "delta": float(row[delta_col]),
+            "ci_lower": float(row[lower_col]),
+            "ci_upper": float(row[upper_col]),
+        }
+        if not all(isfinite(value) for value in interval.values()):
+            raise ValueError("Paired interval values must be finite numeric values.")
+        if interval["ci_lower"] > interval["delta"] or interval["delta"] > interval["ci_upper"]:
+            raise ValueError("Paired interval bounds must satisfy lower <= delta <= upper.")
+        lookup[key] = interval
+    return lookup
+
+
+def _lookup_interval_or_reverse(
+    lookup: dict[tuple[str, str], dict[str, float]],
+    left_label: str,
+    right_label: str,
+) -> dict[str, float] | None:
+    direct = lookup.get((left_label, right_label))
+    if direct is not None:
+        return direct
+
+    reverse = lookup.get((right_label, left_label))
+    if reverse is None:
+        return None
+    return {
+        "delta": -reverse["delta"],
+        "ci_lower": -reverse["ci_upper"],
+        "ci_upper": -reverse["ci_lower"],
+    }
 
 
 def _ordered_motionage_sexes(values: pd.Series) -> list[Any]:

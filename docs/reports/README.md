@@ -33,6 +33,9 @@ Use `build_public_metric_interval_frame` before interval forest plots when
 report artifacts include extra internal columns. It keeps only aggregate labels,
 point estimates, confidence bounds, and metric labels, excluding paths, raw
 predictions, and private resample draws.
+Use `build_public_lower_triangle_ci_heatmap_frame` before lower-triangle paired confidence-interval heatmaps.
+It keeps only ordered aggregate row/column labels, deltas, confidence bounds,
+significance flags, and annotations, excluding paths and private resample draws.
 Use `build_public_motionage_mapping_frame` before MotionAge mapping diagnostic
 plots when report artifacts include extra internal columns. It keeps only
 aggregate age-bin mapping diagnostics, sex labels, representative/fitted
