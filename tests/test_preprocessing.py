@@ -168,3 +168,37 @@ def test_nhanes_feature_spec_public_surface_is_neutral() -> None:
         "PAD200",
         "PAD320",
     ]
+
+
+def test_nhanes_feature_bundle_summary_is_public_schema_metadata() -> None:
+    preprocessing_doc = (REPO_ROOT / "docs" / "preprocessing.md").read_text(encoding="utf-8")
+
+    summary = nhanes_features.describe_feature_bundles(levels=[1, 2])
+
+    assert summary == [
+        {
+            "level": 1,
+            "description": "Core demographic and low-dimensional clinical covariates",
+            "feature_count": 6,
+            "numeric_count": 4,
+            "categorical_count": 2,
+            "numeric_features": ["BMXBMI", "BMXWAIST", "BPXDI", "BPXSY"],
+            "categorical_features": ["INDHHINC", "RIAGENDR"],
+        },
+        {
+            "level": 2,
+            "description": "Questionnaire and disease-history covariates",
+            "feature_count": 5,
+            "numeric_count": 0,
+            "categorical_count": 5,
+            "numeric_features": [],
+            "categorical_features": ["DIQ010", "MCQ010", "PAD020", "PAD200", "PAD320"],
+        },
+    ]
+    assert "RIDAGEYR" not in [
+        feature
+        for row in summary
+        for feature in [*row["numeric_features"], *row["categorical_features"]]
+    ]
+    assert "describe_feature_bundles" in preprocessing_doc
+    assert "schema metadata" in preprocessing_doc

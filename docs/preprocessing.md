@@ -34,3 +34,11 @@ running expensive end-to-end model refits.
 static covariates: total rows, observed rows, missing rows, and `missing_rate`.
 The helper is intended for public missingness and robustness summaries without
 printing participant rows or split ID files.
+
+## NHANES Feature Bundles
+
+`describe_feature_bundles` returns public NHANES covariate schema metadata for
+the paper-facing level 1/2/3 feature bundles. Each row includes the level
+description, feature counts, numeric feature names, and categorical feature
+names. This helper is for documentation, manifests, and reproduction checks; it
+does not read raw data, emit participant rows, or reference private data paths.

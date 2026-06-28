@@ -12,6 +12,7 @@ from motionage.preprocessing.mortality import (
     build_fixed_horizon_mortality_table,
     fixed_horizon_target_definition,
 )
+from motionage.preprocessing.nhanes_features import describe_feature_bundles
 from motionage.preprocessing.wear import (
     detect_nonwear_choi,
     downsample_wear_epochs,
@@ -24,6 +25,7 @@ __all__ = [
     "StaticCovariatePreprocessor",
     "build_fixed_horizon_mortality_table",
     "build_static_covariate_table",
+    "describe_feature_bundles",
     "detect_nonwear_choi",
     "downsample_wear_epochs",
     "fit_static_covariate_preprocessor",

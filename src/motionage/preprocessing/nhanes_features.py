@@ -40,6 +40,11 @@ class NHANESFeatureSpec:
 ID_COLUMN = "SEQN"
 TARGET_COLUMN = "RIDAGEYR"
 EXCLUDED_COLUMNS = (TARGET_COLUMN,)
+FEATURE_LEVEL_DESCRIPTIONS = {
+    1: "Core demographic and low-dimensional clinical covariates",
+    2: "Questionnaire and disease-history covariates",
+    3: "Laboratory, CBC, and dietary covariates",
+}
 
 NHANES_FEATURE_SPECS: list[NHANESFeatureSpec] = [
     NHANESFeatureSpec(
@@ -771,6 +776,34 @@ def get_feature_names(
 ) -> list[str]:
     """Return feature names filtered by level and/or kind."""
     return [spec.name for spec in get_feature_specs(levels=levels, kind=kind)]
+
+
+def describe_feature_bundles(
+    *,
+    levels: Iterable[int] | None = None,
+) -> list[dict[str, int | str | list[str]]]:
+    """Return public schema metadata for NHANES feature bundles."""
+    if levels is None:
+        requested_levels = sorted({spec.level for spec in NHANES_FEATURE_SPECS})
+    else:
+        requested_levels = list(dict.fromkeys(int(level) for level in levels))
+
+    rows: list[dict[str, int | str | list[str]]] = []
+    for level in requested_levels:
+        numeric_features = get_feature_names(levels=[level], kind="numeric")
+        categorical_features = get_feature_names(levels=[level], kind="categorical")
+        rows.append(
+            {
+                "level": int(level),
+                "description": FEATURE_LEVEL_DESCRIPTIONS.get(level, f"Level {level} covariates"),
+                "feature_count": len(numeric_features) + len(categorical_features),
+                "numeric_count": len(numeric_features),
+                "categorical_count": len(categorical_features),
+                "numeric_features": numeric_features,
+                "categorical_features": categorical_features,
+            }
+        )
+    return rows
 
 
 LEVEL_1_NUMERIC_FEATURES = get_feature_names(levels=[1], kind="numeric")
