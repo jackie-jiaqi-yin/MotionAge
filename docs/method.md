@@ -11,7 +11,9 @@ The first-stage model predicts fixed-horizon mortality from minute-level acceler
 - Transformer.
 
 Covariate variants include late-fusion and residual-fusion designs for the same
-paper-visible model families.
+paper-visible model families. The public package exposes these model families as
+inspectable implementations and lightweight synthetic-test targets; trained
+weights and local run outputs remain outside git.
 `public_model_family_catalog` returns aggregate model-family rows for public
 summaries so readers can see the covered GRU, LSTM, Transformer, and static
 covariate variants without exposing checkpoints, weights, or private run paths.
