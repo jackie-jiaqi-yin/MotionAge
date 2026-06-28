@@ -47,6 +47,12 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "official_feature_set": "motionage_accel",
     }
     assert payload["output_filters"] == {"families": [], "model_ids": []}
+    assert payload["model_summary"] == {
+        "families": {"gru": 4, "lstm": 3, "transformer": 3},
+        "prediction_modes": {"late_fusion": 4, "none": 3, "residual": 3},
+        "covariates": {"disabled": 3, "enabled": 7},
+        "covariate_levels": {"1": 6, "age": 1, "none": 3},
+    }
     assert payload["model_count"] == 10
     assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
     assert payload["model_ids_by_family"]["lstm"] == [
@@ -101,6 +107,15 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| n_folds | 5 |" in captured.out
     assert "| analysis_template_path | configs/paper/motionage_analysis.yaml |" in captured.out
     assert "| official_feature_set | motionage_accel |" in captured.out
+    assert "## Model Summary" in captured.out
+    assert "| Metric | Value | Count |" in captured.out
+    assert "| family | gru | 4 |" in captured.out
+    assert "| prediction_mode | late_fusion | 4 |" in captured.out
+    assert "| prediction_mode | none | 3 |" in captured.out
+    assert "| covariates | enabled | 7 |" in captured.out
+    assert "| covariate_level | 1 | 6 |" in captured.out
+    assert captured.out.index("## Output Filters") < captured.out.index("## Model Summary")
+    assert captured.out.index("## Model Summary") < captured.out.index("## Models")
     assert "\n".join(
         [
             "| Family | Model ID | Model type | Prediction mode | Architecture | Covariates | "
@@ -184,6 +199,12 @@ def test_validate_paper_models_cli_can_filter_json_by_multiple_families(
         "families": ["transformer", "lstm"],
         "model_ids": [],
     }
+    assert payload["model_summary"] == {
+        "families": {"lstm": 3, "transformer": 3},
+        "prediction_modes": {"late_fusion": 2, "none": 2, "residual": 2},
+        "covariates": {"disabled": 2, "enabled": 4},
+        "covariate_levels": {"1": 4, "none": 2},
+    }
     assert payload["family_counts"] == {"lstm": 3, "transformer": 3}
     assert set(payload["model_ids_by_family"]) == {"lstm", "transformer"}
     assert {model["family"] for model in payload["models"]} == {"lstm", "transformer"}
@@ -252,8 +273,13 @@ def test_validate_paper_models_cli_can_filter_markdown_by_family_and_model_id(
     assert captured.err == ""
     assert "| study_id | mortality_cv_primary_60m |" in captured.out
     assert "## Output Filters" in captured.out
+    assert "## Model Summary" in captured.out
     assert "| families | transformer |" in captured.out
     assert "| model_ids | transformer_level1_residual |" in captured.out
+    assert "| family | transformer | 1 |" in captured.out
+    assert "| prediction_mode | residual | 1 |" in captured.out
+    assert "| covariates | enabled | 1 |" in captured.out
+    assert "| covariate_level | 1 | 1 |" in captured.out
     assert "transformer_level1_residual" in captured.out
     assert "transformer_fitbit_only" not in captured.out
     assert "lstm_level1_residual" not in captured.out
@@ -416,6 +442,7 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert captured.err == ""
     assert markdown.startswith("## Study\n\n| Field | Value |\n")
     assert "| study_id | mortality_cv_primary_60m |" in markdown
+    assert "## Model Summary\n\n| Metric | Value | Count |\n" in markdown
     assert (
         "## Models\n\n| Family | Model ID | Model type | Prediction mode | Architecture | "
         "Covariates | Levels | Numeric features | Seq len | Stride | Epochs | Batch | "

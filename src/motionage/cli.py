@@ -8,7 +8,7 @@ import sys
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from motionage.paper_manifest import (
     PaperModelManifestEntry,
@@ -231,6 +231,7 @@ def _paper_model_manifest_payload(
         "manifest_path": str(manifest_path),
         "study": asdict(study),
         "output_filters": output_filters,
+        "model_summary": _paper_model_summary(entries),
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
         "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
@@ -247,6 +248,7 @@ def _paper_model_manifest_markdown(
         [
             _paper_study_manifest_markdown(study),
             _paper_model_output_filters_markdown(output_filters),
+            _paper_model_summary_markdown(entries),
             _paper_model_entries_markdown(entries),
         ]
     )
@@ -274,6 +276,48 @@ def _paper_model_output_filters_markdown(output_filters: dict[str, list[str]]) -
     for key in ("families", "model_ids"):
         values = ", ".join(output_filters[key]) if output_filters[key] else "-"
         lines.append(f"| {key} | {values} |")
+    return "\n".join(lines)
+
+
+def _paper_model_summary(
+    entries: Sequence[PaperModelManifestEntry],
+) -> dict[str, dict[str, int]]:
+    return {
+        "families": _sorted_counter(entry.family for entry in entries),
+        "prediction_modes": _sorted_counter(
+            entry.prediction_mode or "none" for entry in entries
+        ),
+        "covariates": _sorted_counter(
+            "enabled" if entry.covariates_enabled else "disabled" for entry in entries
+        ),
+        "covariate_levels": _sorted_counter(
+            ", ".join(entry.covariate_levels) if entry.covariate_levels else "none"
+            for entry in entries
+        ),
+    }
+
+
+def _sorted_counter(values: Iterable[str]) -> dict[str, int]:
+    return dict(sorted(Counter(values).items()))
+
+
+def _paper_model_summary_markdown(entries: Sequence[PaperModelManifestEntry]) -> str:
+    summary = _paper_model_summary(entries)
+    lines = [
+        "## Model Summary",
+        "",
+        "| Metric | Value | Count |",
+        "| --- | --- | --- |",
+    ]
+    metric_labels = (
+        ("families", "family"),
+        ("prediction_modes", "prediction_mode"),
+        ("covariates", "covariates"),
+        ("covariate_levels", "covariate_level"),
+    )
+    for key, label in metric_labels:
+        for value, count in summary[key].items():
+            lines.append(f"| {label} | {value} | {count} |")
     return "\n".join(lines)
 
 
