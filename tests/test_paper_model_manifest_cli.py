@@ -557,6 +557,13 @@ def test_validate_paper_models_cli_can_write_text_output_file(
     assert captured.err == ""
     assert output_path.read_text(encoding="utf-8").splitlines() == [
         f"Validated 10 paper model configs from {PAPER_CONFIG_DIR / 'mortality_cv_primary_60m.yaml'}.",
+        "analysis_template_path: configs/paper/motionage_analysis.yaml",
+        (
+            "public_boundary: raw_data=false participant_level_rows=false "
+            "exact_split_ids=false trained_checkpoints=false private_notes=false "
+            "public_config_metadata=true"
+        ),
+        "all_models_ready: true",
         "ready_model_configs: 10",
         "not_ready_model_placeholders: 0",
         "gru: 4",

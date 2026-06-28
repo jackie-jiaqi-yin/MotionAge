@@ -265,8 +265,10 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         )
         output = f"{markdown}\n"
     else:
+        study = load_paper_study_manifest(args.manifest_path)
         output = _paper_model_manifest_text(
             args.manifest_path,
+            study,
             readiness,
             output_entries,
             family_counts,
@@ -337,16 +339,36 @@ def _paper_model_validation_requirements(
 
 def _paper_model_manifest_text(
     manifest_path: Path,
+    study: PaperStudyManifest,
     readiness: PaperManifestReadiness,
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
 ) -> str:
     lines = [f"Validated {len(entries)} paper model configs from {manifest_path}."]
+    lines.append(f"analysis_template_path: {study.analysis_template_path}")
+    lines.append(f"public_boundary: {_public_boundary_text(PAPER_MODEL_PUBLIC_BOUNDARY)}")
+    lines.append(f"all_models_ready: {_bool_text(readiness.all_models_ready)}")
     lines.append(f"ready_model_configs: {readiness.ready_model_count}")
     lines.append(f"not_ready_model_placeholders: {readiness.not_ready_model_count}")
     for family in sorted(family_counts):
         lines.append(f"{family}: {family_counts[family]}")
     return "\n".join(lines) + "\n"
+
+
+def _public_boundary_text(public_boundary: dict[str, bool]) -> str:
+    labels = (
+        ("raw_data", "contains_raw_data"),
+        ("participant_level_rows", "contains_participant_level_rows"),
+        ("exact_split_ids", "contains_exact_split_ids"),
+        ("trained_checkpoints", "contains_trained_checkpoints"),
+        ("private_notes", "contains_private_notes"),
+        ("public_config_metadata", "contains_public_config_metadata"),
+    )
+    return " ".join(f"{label}={_bool_text(public_boundary[field])}" for label, field in labels)
+
+
+def _bool_text(value: bool) -> str:
+    return "true" if value else "false"
 
 
 def _emit_output(output: str, output_path: Path | None) -> None:

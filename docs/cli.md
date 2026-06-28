@@ -37,6 +37,10 @@ Equivalent top-level command:
 uv run motionage validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
 ```
 
+Default text output includes the analysis-template path, a compact
+`public_boundary` line, `all_models_ready`, ready/not-ready config counts, and
+GRU/LSTM/Transformer family counts.
+
 JSON output includes a `public_boundary` block that declares the summary excludes raw data, participant-level rows, exact split IDs, trained checkpoints, and private notes while including public config metadata. Markdown output includes the same information in a `Public Boundary` section with fields such as `contains_raw_data` and `contains_public_config_metadata`.
 
 JSON output also includes a `manifest_readiness` block with ready and not-ready aggregate counts. Markdown output includes the same information in a `Manifest Readiness` section.
