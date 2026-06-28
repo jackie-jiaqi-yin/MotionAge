@@ -73,6 +73,12 @@ def _build_validate_paper_models_parser(
         dest="emit_json",
         help="emit a machine-readable JSON summary",
     )
+    parser.add_argument(
+        "--markdown",
+        action="store_true",
+        dest="emit_markdown",
+        help="emit a Markdown table of resolved paper model configs",
+    )
     return parser
 
 
@@ -91,6 +97,9 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
     if args.emit_json:
         payload = _paper_model_manifest_payload(args.manifest_path, entries, family_counts)
         print(json.dumps(payload, indent=2))
+        return 0
+    if args.emit_markdown:
+        print(_paper_model_manifest_markdown(entries))
         return 0
 
     print(f"Validated {len(entries)} paper model configs from {args.manifest_path}.")
@@ -115,3 +124,21 @@ def _paper_model_manifest_payload(
         "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
         "models": [asdict(entry) for entry in entries],
     }
+
+
+def _paper_model_manifest_markdown(entries: Sequence[PaperModelManifestEntry]) -> str:
+    lines = [
+        "| Family | Model ID | Model type | Prediction mode | Source config |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for entry in entries:
+        prediction_mode = entry.prediction_mode or "-"
+        lines.append(
+            "| "
+            f"{entry.family} | "
+            f"{entry.model_id} | "
+            f"{entry.source_model_type} | "
+            f"{prediction_mode} | "
+            f"{entry.source_config_path} |"
+        )
+    return "\n".join(lines)
