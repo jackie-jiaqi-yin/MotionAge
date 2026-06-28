@@ -112,6 +112,35 @@ def test_validate_synthetic_inputs_rejects_unsafe_public_boundary(tmp_path: Path
         module.validate_synthetic_inputs(tmp_path)
 
 
+def test_build_synthetic_smoke_summary_returns_aggregate_only_overview(tmp_path: Path) -> None:
+    module = _load_generator()
+    module.generate_synthetic_inputs(tmp_path, participants=9, days=2, seed=31)
+
+    summary = module.build_synthetic_smoke_summary(tmp_path)
+
+    assert summary == {
+        "participants": 9,
+        "days": 2,
+        "activity_rows": 9 * 2 * 24,
+        "covariate_rows": 9,
+        "event_count": 1,
+        "event_rate": 0.111111111111,
+        "mean_intensity": 38.604348611111,
+        "mean_attention_coverage": 0.953703703704,
+        "age_min": 43,
+        "age_max": 81,
+        "sex_values": [1, 2],
+        "public_boundary": {
+            "synthetic": True,
+            "contains_real_participants": False,
+            "contains_trained_weights": False,
+            "safe_for_public_smoke_tests": True,
+        },
+    }
+    assert "SEQN" not in summary
+    assert "rows" not in summary
+
+
 def _load_generator():
     spec = importlib.util.spec_from_file_location("synthetic_inputs", GENERATOR_PATH)
     assert spec is not None

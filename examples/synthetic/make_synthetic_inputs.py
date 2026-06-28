@@ -183,6 +183,32 @@ def validate_synthetic_inputs(output_dir: Path | str) -> dict[str, Any]:
     }
 
 
+def build_synthetic_smoke_summary(output_dir: Path | str) -> dict[str, Any]:
+    """Return an aggregate-only overview of generated synthetic smoke inputs."""
+    manifest_summary = validate_synthetic_inputs(output_dir)
+    output_path = Path(output_dir)
+    activity = pd.read_parquet(output_path / manifest_summary["files"]["activity_mortstat"])
+    covariates = pd.read_parquet(output_path / manifest_summary["files"]["covariates"])
+
+    participant_count = int(manifest_summary["participants"])
+    participant_targets = activity[["SEQN", "mortstat"]].drop_duplicates()
+    event_count = int(covariates.merge(participant_targets, on="SEQN")["mortstat"].sum())
+    return {
+        "participants": participant_count,
+        "days": int(manifest_summary["days"]),
+        "activity_rows": int(manifest_summary["row_counts"]["activity_mortstat"]),
+        "covariate_rows": int(manifest_summary["row_counts"]["covariates"]),
+        "event_count": event_count,
+        "event_rate": _public_float(event_count / participant_count),
+        "mean_intensity": _public_float(activity["intensity_mean"].mean()),
+        "mean_attention_coverage": _public_float(activity["attention_flag"].mean()),
+        "age_min": int(covariates["RIDAGEYR"].min()),
+        "age_max": int(covariates["RIDAGEYR"].max()),
+        "sex_values": [int(value) for value in sorted(covariates["RIAGENDR"].unique().tolist())],
+        "public_boundary": dict(manifest_summary["public_boundary"]),
+    }
+
+
 def _load_yaml_mapping(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
@@ -224,6 +250,10 @@ def _validate_metadata(
     for column in [*numeric_columns, *categorical_columns]:
         if column not in covariates.columns:
             raise ValueError(f"Synthetic metadata covariate is missing: {column}")
+
+
+def _public_float(value: float) -> float:
+    return round(float(value), 12)
 
 
 def main() -> None:

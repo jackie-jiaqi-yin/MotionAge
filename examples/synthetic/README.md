@@ -25,4 +25,9 @@ generator module. It verifies the public-boundary declaration, expected files,
 row counts, table columns, and metadata references before returning a compact
 manifest summary.
 
+Call `build_synthetic_smoke_summary(output_dir)` when a smoke test or README
+needs an aggregate-only overview of the generated inputs. The summary reports
+counts, event rate, mean intensity, attention coverage, age range, sex values,
+and the public-boundary declaration without returning participant rows.
+
 The generated directory is for local use and should not be committed.
