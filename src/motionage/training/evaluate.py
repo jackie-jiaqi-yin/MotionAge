@@ -75,3 +75,10 @@ def align_meta_to_predictions(
         "Window metadata length must match the number of predictions "
         f"(got meta={meta_len}, predictions={sample_count}, allow_prefix={allow_prefix})."
     )
+
+
+def logits_to_probabilities(logits: np.ndarray) -> np.ndarray:
+    """Convert logits to probabilities with a numerically stable sigmoid."""
+    logits_arr = np.asarray(logits, dtype=np.float64)
+    clipped = np.clip(logits_arr, -60.0, 60.0)
+    return 1.0 / (1.0 + np.exp(-clipped))

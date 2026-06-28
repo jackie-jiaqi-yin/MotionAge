@@ -5,6 +5,7 @@ from motionage.training.device import mps_diagnostics, resolve_device
 from motionage.training.evaluate import (
     aggregate_to_participant,
     align_meta_to_predictions,
+    logits_to_probabilities,
     predict,
 )
 from motionage.training.freeze import (
@@ -78,6 +79,7 @@ __all__ = [
     "count_trainable_parameters",
     "is_binary_classification",
     "initial_best_metric",
+    "logits_to_probabilities",
     "metric_improved",
     "mps_diagnostics",
     "nan_validation_metrics",

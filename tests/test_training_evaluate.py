@@ -98,3 +98,23 @@ def test_align_meta_to_predictions_requires_matching_length_unless_prefix_allowe
         training.align_meta_to_predictions(meta, 2)
     with pytest.raises(ValueError, match="non-negative"):
         training.align_meta_to_predictions(meta, -1)
+
+
+def test_logits_to_probabilities_applies_sigmoid_to_known_logits() -> None:
+    assert hasattr(training, "logits_to_probabilities")
+
+    probabilities = training.logits_to_probabilities(np.array([0.0, np.log(3.0), -np.log(3.0)]))
+
+    np.testing.assert_allclose(probabilities, np.array([0.5, 0.75, 0.25]), rtol=1.0e-7)
+
+
+def test_logits_to_probabilities_clips_extreme_logits_to_finite_probabilities() -> None:
+    assert hasattr(training, "logits_to_probabilities")
+
+    probabilities = training.logits_to_probabilities(np.array([-1000.0, 1000.0]))
+
+    assert probabilities.dtype == np.float64
+    assert np.all(np.isfinite(probabilities))
+    assert probabilities[0] > 0.0
+    assert np.all(probabilities <= 1.0)
+    assert np.all(probabilities >= 0.0)
