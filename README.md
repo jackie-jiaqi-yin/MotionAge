@@ -6,11 +6,13 @@ The repository is organized as a paper-reproduction codebase. It is intended for
 
 ## Repository Status
 
-This repository is being built in focused pull requests. The first public scope is the repository scaffold and publication boundary. Model implementations, MotionAge analysis, benchmark scripts, and robustness reports will be added in separate topic PRs.
+This repository is being built in focused pull requests. The current paper-configuration stack includes public config templates and a manifest validation CLI for paper-visible GRU, LSTM, and Transformer model families. Model implementations, MotionAge analysis, benchmark scripts, and robustness reports are added in separate topic PRs.
 
 ## What Is Included
 
 - Source package namespace: `motionage`
+- Paper model configuration templates under `configs/paper/`
+- A manifest validation CLI: `motionage-validate-paper-models`
 - Documentation for data preparation, method overview, artifact policy, and reproduction levels
 - CI skeleton and package import smoke test
 - A public boundary that keeps implementation code separate from generated data, checkpoints, and private research notes
@@ -46,6 +48,14 @@ Run the current smoke checks:
 uv run python -m compileall src
 uv run pytest
 ```
+
+Validate the paper-visible model manifest without requiring NHANES data:
+
+```bash
+uv run motionage-validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
+```
+
+The manifest check verifies that the curated paper configs cover the GRU, LSTM, and Transformer families and can emit compact JSON or Markdown summaries for inspection.
 
 ## Reproduction Levels
 
