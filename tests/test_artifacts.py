@@ -289,3 +289,27 @@ def test_load_artifact_manifest_rejects_parent_directory_escape(tmp_path: Path) 
 
     with pytest.raises(ValueError, match="stay inside the artifact bundle"):
         load_artifact_manifest(manifest_path)
+
+
+def test_load_artifact_manifest_rejects_string_required_flags(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.yaml"
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "artifacts": [
+                    {
+                        "id": "aggregate_table",
+                        "path": "reports/table.csv",
+                        "description": "Aggregate report table.",
+                        "required": "false",
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="required must be a boolean"):
+        load_artifact_manifest(manifest_path)

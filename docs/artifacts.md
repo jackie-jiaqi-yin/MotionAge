@@ -66,6 +66,8 @@ artifacts:
     required: true
 ```
 
+Use YAML booleans for `required` (`true` or `false`), not quoted strings.
+
 The manifest helper reports present files, missing required files, missing
 optional files, and checksum mismatches without requiring artifacts to be stored
 in git. The JSON report also includes a `summary` block with

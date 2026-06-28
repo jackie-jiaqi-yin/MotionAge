@@ -164,12 +164,16 @@ def _artifact_spec_from_mapping(row: Any) -> ArtifactSpec:
         if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise ValueError(f"Artifact {artifact_id} has invalid sha256.")
 
+    required = row.get("required", True)
+    if not isinstance(required, bool):
+        raise ValueError(f"Artifact {artifact_id} required must be a boolean.")
+
     return ArtifactSpec(
         artifact_id=artifact_id,
         path=artifact_path,
         description=description,
         sha256=digest,
-        required=bool(row.get("required", True)),
+        required=required,
     )
 
 
