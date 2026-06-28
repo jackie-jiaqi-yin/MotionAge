@@ -14,6 +14,7 @@ from motionage.training.freeze import (
     resolve_freeze_stage,
 )
 from motionage.training.loss import build_loss_function
+from motionage.training.limits import optional_positive_int
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.optimizer import (
     OptimizerGroupSummary,
@@ -57,6 +58,7 @@ __all__ = [
     "initial_best_metric",
     "metric_improved",
     "mps_diagnostics",
+    "optional_positive_int",
     "parse_freeze_schedule",
     "predict",
     "resolve_device",
