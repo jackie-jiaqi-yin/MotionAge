@@ -68,6 +68,13 @@ def _build_validate_paper_models_parser(
         help="required paper-visible model family; may be provided more than once",
     )
     parser.add_argument(
+        "--family",
+        action="append",
+        dest="output_families",
+        default=None,
+        help="only include this model family in the emitted output; may be provided more than once",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="emit_json",
@@ -100,14 +107,20 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    family_counts = Counter(entry.family for entry in entries)
+    try:
+        output_entries = _filter_manifest_entries(entries, args.output_families)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    family_counts = Counter(entry.family for entry in output_entries)
     if args.emit_json:
-        payload = _paper_model_manifest_payload(args.manifest_path, entries, family_counts)
+        payload = _paper_model_manifest_payload(args.manifest_path, output_entries, family_counts)
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
-        output = f"{_paper_model_manifest_markdown(entries)}\n"
+        output = f"{_paper_model_manifest_markdown(output_entries)}\n"
     else:
-        output = _paper_model_manifest_text(args.manifest_path, entries, family_counts)
+        output = _paper_model_manifest_text(args.manifest_path, output_entries, family_counts)
 
     try:
         _emit_output(output, args.output_path)
@@ -115,6 +128,27 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     return 0
+
+
+def _filter_manifest_entries(
+    entries: Sequence[PaperModelManifestEntry],
+    output_families: Sequence[str] | None,
+) -> tuple[PaperModelManifestEntry, ...]:
+    if not output_families:
+        return tuple(entries)
+
+    normalized_families = tuple(
+        dict.fromkeys(family.strip().lower() for family in output_families)
+    )
+    observed_families = {entry.family for entry in entries}
+    unknown_families = sorted(set(normalized_families) - observed_families)
+    if unknown_families:
+        raise ValueError(f"Unknown paper model family filters: {unknown_families}")
+
+    selected = tuple(entry for entry in entries if entry.family in normalized_families)
+    if not selected:
+        raise ValueError(f"No paper model entries matched family filters: {list(normalized_families)}")
+    return selected
 
 
 def _paper_model_manifest_text(

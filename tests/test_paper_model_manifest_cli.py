@@ -84,6 +84,95 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     )
 
 
+def test_validate_paper_models_cli_can_filter_markdown_by_family(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--markdown",
+            "--family",
+            "lstm",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 0
+    assert captured.err == ""
+    assert "lstm_fitbit_only" in captured.out
+    assert "lstm_level1_residual" in captured.out
+    assert "gru_fitbit_only" not in captured.out
+    assert "transformer_fitbit_only" not in captured.out
+
+
+def test_validate_paper_models_cli_can_filter_json_by_multiple_families(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--json",
+            "--family",
+            "Transformer",
+            "--family",
+            "lstm",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert payload["model_count"] == 6
+    assert payload["family_counts"] == {"lstm": 3, "transformer": 3}
+    assert set(payload["model_ids_by_family"]) == {"lstm", "transformer"}
+    assert {model["family"] for model in payload["models"]} == {"lstm", "transformer"}
+
+
+def test_validate_paper_models_cli_returns_error_for_unknown_output_family(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--family",
+            "cnn",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert captured.out == ""
+    assert "Unknown paper model family filters: ['cnn']" in captured.err
+
+
+def test_validate_paper_models_cli_rejects_unknown_family_with_matching_filter(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--family",
+            "lstm",
+            "--family",
+            "cnn",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert captured.out == ""
+    assert "Unknown paper model family filters: ['cnn']" in captured.err
+
+
 def test_validate_paper_models_cli_can_write_text_output_file(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -276,6 +365,37 @@ def test_validate_paper_models_console_script_output_file(tmp_path: Path) -> Non
     assert result.stderr == ""
     assert payload["model_count"] == 10
     assert payload["family_counts"]["transformer"] == 3
+
+
+def test_validate_paper_models_console_script_output_file_with_family_filter(tmp_path: Path) -> None:
+    import subprocess
+
+    output_path = tmp_path / "manifest.json"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage-validate-paper-models",
+            "--json",
+            "--family",
+            "transformer",
+            "--output",
+            str(output_path),
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert payload["model_count"] == 3
+    assert payload["family_counts"] == {"transformer": 3}
+    assert set(payload["model_ids_by_family"]) == {"transformer"}
 
 
 def _write_yaml(path: Path, payload: object) -> None:
