@@ -13,9 +13,11 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from motionage.paper_manifest import (
+    PaperManifestReadiness,
     PaperModelManifestEntry,
     PaperStudyManifest,
     REQUIRED_PAPER_MODEL_FAMILIES,
+    load_paper_manifest_readiness,
     load_paper_study_manifest,
     validate_paper_model_manifest,
 )
@@ -222,6 +224,7 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         return 1
 
     output_filters = _paper_model_output_filters(args.output_families, args.output_model_ids)
+    readiness = load_paper_manifest_readiness(args.manifest_path)
     family_counts = Counter(entry.family for entry in output_entries)
     if args.emit_json:
         study = load_paper_study_manifest(args.manifest_path)
@@ -230,6 +233,7 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
             study,
             output_filters,
             validation_requirements,
+            readiness,
             output_entries,
             family_counts,
             include_models=not args.summary_only,
@@ -241,12 +245,18 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
             study,
             output_filters,
             validation_requirements,
+            readiness,
             output_entries,
             include_models=not args.summary_only,
         )
         output = f"{markdown}\n"
     else:
-        output = _paper_model_manifest_text(args.manifest_path, output_entries, family_counts)
+        output = _paper_model_manifest_text(
+            args.manifest_path,
+            readiness,
+            output_entries,
+            family_counts,
+        )
 
     try:
         _emit_output(output, args.output_path)
@@ -313,10 +323,13 @@ def _paper_model_validation_requirements(
 
 def _paper_model_manifest_text(
     manifest_path: Path,
+    readiness: PaperManifestReadiness,
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
 ) -> str:
     lines = [f"Validated {len(entries)} paper model configs from {manifest_path}."]
+    lines.append(f"ready_model_configs: {readiness.ready_model_count}")
+    lines.append(f"not_ready_model_placeholders: {readiness.not_ready_model_count}")
     for family in sorted(family_counts):
         lines.append(f"{family}: {family_counts[family]}")
     return "\n".join(lines) + "\n"
@@ -336,6 +349,7 @@ def _paper_model_manifest_payload(
     study: PaperStudyManifest,
     output_filters: dict[str, list[str]],
     validation_requirements: dict[str, list[str]],
+    readiness: PaperManifestReadiness,
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
     *,
@@ -346,6 +360,7 @@ def _paper_model_manifest_payload(
         "study": asdict(study),
         "output_filters": output_filters,
         "validation_requirements": validation_requirements,
+        "manifest_readiness": asdict(readiness),
         "model_summary": _paper_model_summary(entries),
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
@@ -363,6 +378,7 @@ def _paper_model_manifest_markdown(
     study: PaperStudyManifest,
     output_filters: dict[str, list[str]],
     validation_requirements: dict[str, list[str]],
+    readiness: PaperManifestReadiness,
     entries: Sequence[PaperModelManifestEntry],
     *,
     include_models: bool = True,
@@ -371,6 +387,7 @@ def _paper_model_manifest_markdown(
         _paper_study_manifest_markdown(study),
         _paper_model_output_filters_markdown(output_filters),
         _paper_model_validation_requirements_markdown(validation_requirements),
+        _paper_manifest_readiness_markdown(readiness),
         _paper_model_summary_markdown(entries),
     ]
     if include_models:
@@ -415,6 +432,19 @@ def _paper_model_validation_requirements_markdown(
     required_families = validation_requirements["required_families"]
     values = ", ".join(required_families) if required_families else "-"
     lines.append(f"| required_families | {values} |")
+    return "\n".join(lines)
+
+
+def _paper_manifest_readiness_markdown(readiness: PaperManifestReadiness) -> str:
+    lines = [
+        "## Manifest Readiness",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    for field, value in asdict(readiness).items():
+        rendered = str(value).lower() if isinstance(value, bool) else str(value)
+        lines.append(f"| {field} | {rendered} |")
     return "\n".join(lines)
 
 

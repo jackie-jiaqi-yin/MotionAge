@@ -61,6 +61,16 @@ class PaperStudyManifest:
     official_feature_set: str
 
 
+@dataclass(frozen=True)
+class PaperManifestReadiness:
+    """Aggregate readiness counts for one public paper manifest."""
+
+    ready_model_count: int
+    not_ready_model_count: int
+    total_model_count: int
+    all_models_ready: bool
+
+
 def load_paper_study_manifest(manifest_path: str | Path) -> PaperStudyManifest:
     """Load and validate public study metadata from a paper manifest."""
     path = Path(manifest_path)
@@ -85,6 +95,20 @@ def load_paper_study_manifest(manifest_path: str | Path) -> PaperStudyManifest:
         training_seed=_required_int(study, "training_seed", context="study"),
         analysis_template_path=analysis_template_path,
         official_feature_set=_required_text(study, "official_feature_set", context="study"),
+    )
+
+
+def load_paper_manifest_readiness(manifest_path: str | Path) -> PaperManifestReadiness:
+    """Load aggregate ready/not-ready model counts from a paper manifest."""
+    path = Path(manifest_path)
+    manifest = _load_yaml(path)
+    models = _manifest_list(manifest, "models", required=True)
+    not_ready_models = _manifest_list(manifest, "not_ready_models", required=False)
+    return PaperManifestReadiness(
+        ready_model_count=len(models),
+        not_ready_model_count=len(not_ready_models),
+        total_model_count=len(models) + len(not_ready_models),
+        all_models_ready=len(not_ready_models) == 0,
     )
 
 
@@ -204,8 +228,9 @@ def validate_paper_model_manifest(
     path = Path(manifest_path)
     manifest = _load_yaml(path)
     load_paper_study_manifest(path)
-    not_ready_models = manifest.get("not_ready_models", [])
-    if not_ready_models:
+    readiness = load_paper_manifest_readiness(path)
+    if not readiness.all_models_ready:
+        not_ready_models = manifest.get("not_ready_models", [])
         raise ValueError(f"Paper model manifest still has not_ready_models: {not_ready_models}")
 
     entries = load_paper_model_manifest(path)
@@ -221,6 +246,17 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"Config must be a mapping: {path}")
     return payload
+
+
+def _manifest_list(manifest: dict[str, Any], key: str, *, required: bool) -> list[Any]:
+    value = manifest.get(key)
+    if value is None:
+        if required:
+            raise ValueError(f"Paper model manifest must define a {key} list.")
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"Paper model manifest {key} must be a list.")
+    return value
 
 
 def _infer_repo_root(manifest_path: Path) -> Path:

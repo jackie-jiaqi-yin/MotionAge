@@ -50,6 +50,12 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
     assert payload["validation_requirements"] == {
         "required_families": ["gru", "lstm", "transformer"]
     }
+    assert payload["manifest_readiness"] == {
+        "ready_model_count": 10,
+        "not_ready_model_count": 0,
+        "total_model_count": 10,
+        "all_models_ready": True,
+    }
     assert payload["model_summary"] == {
         "families": {"gru": 4, "lstm": 3, "transformer": 3},
         "prediction_modes": {"late_fusion": 4, "none": 3, "residual": 3},
@@ -111,6 +117,12 @@ def test_validate_paper_models_cli_can_emit_summary_only_json(
     assert payload["validation_requirements"] == {
         "required_families": ["gru", "lstm", "transformer"]
     }
+    assert payload["manifest_readiness"] == {
+        "ready_model_count": 10,
+        "not_ready_model_count": 0,
+        "total_model_count": 10,
+        "all_models_ready": True,
+    }
     assert payload["model_summary"] == {
         "families": {"gru": 4, "lstm": 3, "transformer": 3},
         "prediction_modes": {"late_fusion": 4, "none": 3, "residual": 3},
@@ -147,6 +159,11 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "## Validation Requirements" in captured.out
     assert "| Requirement | Values |" in captured.out
     assert "| required_families | gru, lstm, transformer |" in captured.out
+    assert "## Manifest Readiness" in captured.out
+    assert "| ready_model_count | 10 |" in captured.out
+    assert "| not_ready_model_count | 0 |" in captured.out
+    assert "| total_model_count | 10 |" in captured.out
+    assert "| all_models_ready | true |" in captured.out
     assert "## Model Summary" in captured.out
     assert "| Metric | Value | Count |" in captured.out
     assert "| family | gru | 4 |" in captured.out
@@ -158,6 +175,9 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
         "## Validation Requirements"
     )
     assert captured.out.index("## Validation Requirements") < captured.out.index(
+        "## Manifest Readiness"
+    )
+    assert captured.out.index("## Manifest Readiness") < captured.out.index(
         "## Model Summary"
     )
     assert captured.out.index("## Model Summary") < captured.out.index("## Models")
@@ -488,6 +508,8 @@ def test_validate_paper_models_cli_can_write_text_output_file(
     assert captured.err == ""
     assert output_path.read_text(encoding="utf-8").splitlines() == [
         f"Validated 10 paper model configs from {PAPER_CONFIG_DIR / 'mortality_cv_primary_60m.yaml'}.",
+        "ready_model_configs: 10",
+        "not_ready_model_placeholders: 0",
         "gru: 4",
         "lstm: 3",
         "transformer: 3",

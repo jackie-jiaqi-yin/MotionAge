@@ -5,8 +5,10 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 
 from motionage.paper_manifest import (
+    PaperManifestReadiness,
     PaperModelManifestEntry,
     PaperStudyManifest,
+    load_paper_manifest_readiness,
     load_paper_model_manifest,
     load_paper_study_manifest,
     validate_paper_model_manifest,
@@ -18,9 +20,11 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 __all__ = [
+    "PaperManifestReadiness",
     "PaperModelManifestEntry",
     "PaperStudyManifest",
     "__version__",
+    "load_paper_manifest_readiness",
     "load_paper_model_manifest",
     "load_paper_study_manifest",
     "validate_paper_model_manifest",

@@ -111,6 +111,20 @@ def test_load_paper_study_manifest_records_public_study_metadata() -> None:
     assert study.official_feature_set == "motionage_accel"
 
 
+def test_load_paper_manifest_readiness_counts_ready_and_not_ready_models() -> None:
+    assert hasattr(motionage, "PaperManifestReadiness")
+    assert hasattr(motionage, "load_paper_manifest_readiness")
+
+    readiness = motionage.load_paper_manifest_readiness(
+        PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"
+    )
+
+    assert readiness.ready_model_count == 10
+    assert readiness.not_ready_model_count == 0
+    assert readiness.total_model_count == 10
+    assert readiness.all_models_ready is True
+
+
 def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     tmp_path: Path,
 ) -> None:
