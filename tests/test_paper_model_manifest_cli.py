@@ -47,6 +47,9 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "official_feature_set": "motionage_accel",
     }
     assert payload["output_filters"] == {"families": [], "model_ids": []}
+    assert payload["validation_requirements"] == {
+        "required_families": ["gru", "lstm", "transformer"]
+    }
     assert payload["model_summary"] == {
         "families": {"gru": 4, "lstm": 3, "transformer": 3},
         "prediction_modes": {"late_fusion": 4, "none": 3, "residual": 3},
@@ -107,6 +110,9 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| n_folds | 5 |" in captured.out
     assert "| analysis_template_path | configs/paper/motionage_analysis.yaml |" in captured.out
     assert "| official_feature_set | motionage_accel |" in captured.out
+    assert "## Validation Requirements" in captured.out
+    assert "| Requirement | Values |" in captured.out
+    assert "| required_families | gru, lstm, transformer |" in captured.out
     assert "## Model Summary" in captured.out
     assert "| Metric | Value | Count |" in captured.out
     assert "| family | gru | 4 |" in captured.out
@@ -114,7 +120,12 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| prediction_mode | none | 3 |" in captured.out
     assert "| covariates | enabled | 7 |" in captured.out
     assert "| covariate_level | 1 | 6 |" in captured.out
-    assert captured.out.index("## Output Filters") < captured.out.index("## Model Summary")
+    assert captured.out.index("## Output Filters") < captured.out.index(
+        "## Validation Requirements"
+    )
+    assert captured.out.index("## Validation Requirements") < captured.out.index(
+        "## Model Summary"
+    )
     assert captured.out.index("## Model Summary") < captured.out.index("## Models")
     assert "\n".join(
         [
@@ -208,6 +219,31 @@ def test_validate_paper_models_cli_can_filter_json_by_multiple_families(
     assert payload["family_counts"] == {"lstm": 3, "transformer": 3}
     assert set(payload["model_ids_by_family"]) == {"lstm", "transformer"}
     assert {model["family"] for model in payload["models"]} == {"lstm", "transformer"}
+
+
+def test_validate_paper_models_cli_reports_custom_required_families_in_json(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        [
+            "--json",
+            "--required-family",
+            "Transformer",
+            "--required-family",
+            "GRU",
+            str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert payload["validation_requirements"] == {
+        "required_families": ["transformer", "gru"]
+    }
 
 
 def test_validate_paper_models_cli_can_filter_json_by_model_id(
@@ -442,6 +478,7 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert captured.err == ""
     assert markdown.startswith("## Study\n\n| Field | Value |\n")
     assert "| study_id | mortality_cv_primary_60m |" in markdown
+    assert "## Validation Requirements\n\n| Requirement | Values |\n" in markdown
     assert "## Model Summary\n\n| Metric | Value | Count |\n" in markdown
     assert (
         "## Models\n\n| Family | Model ID | Model type | Prediction mode | Architecture | "

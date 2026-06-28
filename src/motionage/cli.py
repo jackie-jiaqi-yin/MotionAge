@@ -106,7 +106,8 @@ def _build_validate_paper_models_parser(
 
 
 def _validate_paper_models(args: argparse.Namespace) -> int:
-    required_families = tuple(args.required_families or REQUIRED_PAPER_MODEL_FAMILIES)
+    validation_requirements = _paper_model_validation_requirements(args.required_families)
+    required_families = tuple(validation_requirements["required_families"])
     try:
         entries = validate_paper_model_manifest(
             args.manifest_path,
@@ -134,13 +135,20 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
             args.manifest_path,
             study,
             output_filters,
+            validation_requirements,
             output_entries,
             family_counts,
         )
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
         study = load_paper_study_manifest(args.manifest_path)
-        output = f"{_paper_model_manifest_markdown(study, output_filters, output_entries)}\n"
+        markdown = _paper_model_manifest_markdown(
+            study,
+            output_filters,
+            validation_requirements,
+            output_entries,
+        )
+        output = f"{markdown}\n"
     else:
         output = _paper_model_manifest_text(args.manifest_path, output_entries, family_counts)
 
@@ -196,6 +204,17 @@ def _paper_model_output_filters(
     }
 
 
+def _paper_model_validation_requirements(
+    required_families: Sequence[str] | None,
+) -> dict[str, list[str]]:
+    family_values = required_families or REQUIRED_PAPER_MODEL_FAMILIES
+    return {
+        "required_families": list(
+            dict.fromkeys(family.strip().lower() for family in family_values)
+        ),
+    }
+
+
 def _paper_model_manifest_text(
     manifest_path: Path,
     entries: Sequence[PaperModelManifestEntry],
@@ -220,6 +239,7 @@ def _paper_model_manifest_payload(
     manifest_path: Path,
     study: PaperStudyManifest,
     output_filters: dict[str, list[str]],
+    validation_requirements: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
 ) -> dict[str, object]:
@@ -231,6 +251,7 @@ def _paper_model_manifest_payload(
         "manifest_path": str(manifest_path),
         "study": asdict(study),
         "output_filters": output_filters,
+        "validation_requirements": validation_requirements,
         "model_summary": _paper_model_summary(entries),
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
@@ -242,12 +263,14 @@ def _paper_model_manifest_payload(
 def _paper_model_manifest_markdown(
     study: PaperStudyManifest,
     output_filters: dict[str, list[str]],
+    validation_requirements: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
 ) -> str:
     return "\n\n".join(
         [
             _paper_study_manifest_markdown(study),
             _paper_model_output_filters_markdown(output_filters),
+            _paper_model_validation_requirements_markdown(validation_requirements),
             _paper_model_summary_markdown(entries),
             _paper_model_entries_markdown(entries),
         ]
@@ -276,6 +299,21 @@ def _paper_model_output_filters_markdown(output_filters: dict[str, list[str]]) -
     for key in ("families", "model_ids"):
         values = ", ".join(output_filters[key]) if output_filters[key] else "-"
         lines.append(f"| {key} | {values} |")
+    return "\n".join(lines)
+
+
+def _paper_model_validation_requirements_markdown(
+    validation_requirements: dict[str, list[str]],
+) -> str:
+    lines = [
+        "## Validation Requirements",
+        "",
+        "| Requirement | Values |",
+        "| --- | --- |",
+    ]
+    required_families = validation_requirements["required_families"]
+    values = ", ".join(required_families) if required_families else "-"
+    lines.append(f"| required_families | {values} |")
     return "\n".join(lines)
 
 
