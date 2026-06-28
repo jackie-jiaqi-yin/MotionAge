@@ -24,6 +24,9 @@ dependencies = [
     "tqdm>=4.66",
 ]
 
+[project.scripts]
+motionage-validate-paper-models = "motionage.cli:validate_paper_models_main"
+
 [project.optional-dependencies]
 test = [
     "pytest>=8.0",
