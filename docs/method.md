@@ -24,6 +24,11 @@ MotionAge_i = (logit(p_i) - alpha_s) / beta_s
 MotionAgeAccel_i = MotionAge_i - chronological_age_i
 ```
 
+`build_participant_source_predictions` implements the public source-prediction
+aggregation step for synthetic or local run outputs only: it converts
+window-level logits or probabilities into participant-level mean probability,
+optional participant logit, split label, target, and window count.
+
 The mapping is fit by sex using training participants only. Public configs should expose the fit partitions, clipping epsilon, weighting behavior, and whether mapped ages are clamped to the fit age range.
 
 ## Secondary Evaluation
