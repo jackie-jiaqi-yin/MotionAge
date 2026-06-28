@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import isfinite
 from typing import Any, Optional, Sequence
 
 import matplotlib.pyplot as plt
@@ -14,6 +15,16 @@ DEFAULT_DAY_COLUMN = "PAXDAY"
 DEFAULT_HOUR_COLUMN = "PAXHOUR"
 DEFAULT_AGE_COLUMN = "RIDAGEYR"
 DEFAULT_INTENSITY_COLUMN = "intensity_mean"
+DEFAULT_MAPPING_SEX_LABELS = {
+    1: "Male",
+    2: "Female",
+    "1": "Male",
+    "2": "Female",
+}
+DEFAULT_MAPPING_SEX_COLORS = {
+    "Female": "#EE8A82",
+    "Male": "#5AA6B3",
+}
 
 
 def build_public_metric_interval_frame(
@@ -143,6 +154,198 @@ def plot_metric_interval_forest(
     ax.set_xlabel(xlabel)
     ax.set_title(title if title is not None else "", fontweight="bold")
     ax.grid(True, axis="x", alpha=0.25, linestyle="--")
+    return ax
+
+
+def build_public_motionage_mapping_frame(
+    data: pd.DataFrame,
+    *,
+    sex_col: str = "sex_value",
+    age_col: str = "age_bin",
+    observed_probability_col: str = "representative_probability",
+    fitted_probability_col: str = "fitted_probability",
+    observed_logit_col: str = "logit_probability",
+    fitted_logit_col: str = "fitted_logit_probability",
+    count_col: str | None = "n_participants",
+    sex_labels: Optional[dict[Any, str]] = None,
+) -> pd.DataFrame:
+    """Return an allowlisted aggregate MotionAge mapping diagnostics frame."""
+    required = [
+        sex_col,
+        age_col,
+        observed_probability_col,
+        fitted_probability_col,
+        observed_logit_col,
+        fitted_logit_col,
+    ]
+    missing = [column for column in required if column not in data.columns]
+    if missing:
+        raise KeyError(f"MotionAge mapping frame input is missing required columns: {missing}")
+
+    output_columns = [
+        "sex_value",
+        "sex_label",
+        "age_bin",
+        "representative_probability",
+        "fitted_probability",
+        "logit_probability",
+        "fitted_logit_probability",
+    ]
+    keep_count = count_col is not None and count_col in data.columns
+    if keep_count:
+        output_columns.append("n_participants")
+    if data.empty:
+        return pd.DataFrame(columns=output_columns)
+    if data[sex_col].isna().any():
+        raise ValueError("MotionAge mapping sex values must be non-missing.")
+
+    label_lookup = dict(DEFAULT_MAPPING_SEX_LABELS)
+    if sex_labels:
+        label_lookup.update(sex_labels)
+
+    frame = pd.DataFrame(
+        {
+            "sex_value": data[sex_col],
+            "sex_label": data[sex_col].map(
+                lambda value: _motionage_sex_label(value, sex_labels=label_lookup)
+            ),
+            "age_bin": _coerce_finite_numeric(
+                data,
+                age_col,
+                frame_name="MotionAge mapping frame",
+            ),
+            "representative_probability": _coerce_finite_numeric(
+                data,
+                observed_probability_col,
+                frame_name="MotionAge mapping frame",
+            ),
+            "fitted_probability": _coerce_finite_numeric(
+                data,
+                fitted_probability_col,
+                frame_name="MotionAge mapping frame",
+            ),
+            "logit_probability": _coerce_finite_numeric(
+                data,
+                observed_logit_col,
+                frame_name="MotionAge mapping frame",
+            ),
+            "fitted_logit_probability": _coerce_finite_numeric(
+                data,
+                fitted_logit_col,
+                frame_name="MotionAge mapping frame",
+            ),
+        }
+    )
+    _validate_probability_columns(
+        frame,
+        columns=["representative_probability", "fitted_probability"],
+        frame_name="MotionAge mapping frame",
+    )
+    if keep_count:
+        frame["n_participants"] = _coerce_finite_numeric(
+            data,
+            count_col,
+            frame_name="MotionAge mapping frame",
+        )
+        if (frame["n_participants"] < 0).any():
+            raise ValueError("MotionAge mapping participant counts must be non-negative.")
+
+    return frame[output_columns]
+
+
+def plot_motionage_mapping_diagnostics(
+    data: pd.DataFrame,
+    *,
+    age_col: str = "age_bin",
+    sex_col: str = "sex_label",
+    observed_probability_col: str = "representative_probability",
+    fitted_probability_col: str = "fitted_probability",
+    xlabel: str = "Chronological age",
+    ylabel: str = "Representative mortality probability",
+    title: Optional[str] = "MotionAge mapping diagnostics",
+    colors: Optional[dict[Any, str]] = None,
+    marker_size: float = 34.0,
+    line_width: float = 2.0,
+    probability_headroom: float = 0.08,
+    figsize: Optional[tuple[int | float, int | float]] = None,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Plot aggregate age-bin representative probabilities and fitted curves."""
+    required = [age_col, sex_col, observed_probability_col, fitted_probability_col]
+    missing = [column for column in required if column not in data.columns]
+    if missing:
+        raise KeyError(f"MotionAge mapping plot input is missing required columns: {missing}")
+    if data.empty:
+        raise ValueError("MotionAge mapping plot input is empty.")
+    if marker_size <= 0:
+        raise ValueError("marker_size must be positive")
+    if line_width <= 0:
+        raise ValueError("line_width must be positive")
+    if probability_headroom < 0:
+        raise ValueError("probability_headroom must be non-negative")
+    if data[sex_col].isna().any():
+        raise ValueError("MotionAge mapping sex values must be non-missing.")
+
+    plot_data = data[[age_col, sex_col, observed_probability_col, fitted_probability_col]].copy()
+    for column in (age_col, observed_probability_col, fitted_probability_col):
+        plot_data[column] = _coerce_finite_numeric(
+            plot_data,
+            column,
+            frame_name="MotionAge mapping plot",
+        )
+    _validate_probability_columns(
+        plot_data,
+        columns=[observed_probability_col, fitted_probability_col],
+        frame_name="MotionAge mapping plot",
+    )
+
+    if ax is None:
+        figsize = figsize if figsize is not None else (7.0, 4.6)
+        _, ax = plt.subplots(figsize=figsize)
+
+    color_lookup: dict[Any, str] = dict(DEFAULT_MAPPING_SEX_COLORS)
+    if colors:
+        color_lookup.update(colors)
+
+    for sex_value in _ordered_motionage_sexes(plot_data[sex_col]):
+        label = _motionage_sex_label(sex_value)
+        color = color_lookup.get(sex_value, color_lookup.get(label, "#777777"))
+        group = plot_data[plot_data[sex_col] == sex_value].sort_values(age_col)
+        if group.empty:
+            continue
+        ax.scatter(
+            group[age_col],
+            group[observed_probability_col],
+            color=color,
+            alpha=0.82,
+            s=marker_size,
+            linewidths=0.0,
+            label=f"{label} observed",
+            zorder=2,
+        )
+        ax.plot(
+            group[age_col],
+            group[fitted_probability_col],
+            color=color,
+            linewidth=line_width,
+            label=f"{label} fitted",
+            zorder=3,
+        )
+
+    probability_values = pd.concat(
+        [plot_data[observed_probability_col], plot_data[fitted_probability_col]],
+        axis=0,
+        ignore_index=True,
+    )
+    y_min = max(0.0, float(probability_values.min()) - 0.02)
+    y_max = min(1.0, float(probability_values.max()) + probability_headroom)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title if title is not None else "")
+    ax.set_ylim(y_min, y_max)
+    ax.grid(True, color="#E7E1DA", linewidth=0.8, alpha=0.8)
+    ax.legend(frameon=False, fontsize=8.3, ncol=2, loc="upper left")
     return ax
 
 
@@ -376,3 +579,48 @@ def _build_week_ticks(week_start_day: int, tick_interval_hours: int) -> tuple[li
             ticks.append(day_offset * 24 + hour)
             labels.append(f"{day_name} {hour:02d}:00")
     return ticks, labels
+
+
+def _coerce_finite_numeric(
+    data: pd.DataFrame,
+    column: str,
+    *,
+    frame_name: str,
+) -> pd.Series:
+    values = pd.to_numeric(data[column], errors="raise")
+    if values.isna().any() or not values.map(isfinite).all():
+        raise ValueError(f"{frame_name} column '{column}' must contain finite numeric values.")
+    return values
+
+
+def _validate_probability_columns(
+    data: pd.DataFrame,
+    *,
+    columns: Sequence[str],
+    frame_name: str,
+) -> None:
+    for column in columns:
+        if ((data[column] < 0.0) | (data[column] > 1.0)).any():
+            raise ValueError(f"{frame_name} column '{column}' must contain probabilities in [0, 1].")
+
+
+def _ordered_motionage_sexes(values: pd.Series) -> list[Any]:
+    return sorted(
+        values.drop_duplicates().tolist(),
+        key=lambda value: (
+            _motionage_sex_label(value) != "Female",
+            _motionage_sex_label(value),
+        ),
+    )
+
+
+def _motionage_sex_label(
+    value: Any,
+    *,
+    sex_labels: Optional[dict[Any, str]] = None,
+) -> str:
+    labels = DEFAULT_MAPPING_SEX_LABELS if sex_labels is None else sex_labels
+    label = labels.get(value)
+    if label is not None:
+        return label
+    return str(value)

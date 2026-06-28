@@ -9,8 +9,10 @@ import pytest
 matplotlib.use("Agg")
 
 from motionage.visualization.plots import (
+    build_public_motionage_mapping_frame,
     build_public_metric_interval_frame,
     plot_intensity_timeseries_by_hour,
+    plot_motionage_mapping_diagnostics,
     plot_metric_interval_forest,
 )
 
@@ -22,6 +24,13 @@ def test_reports_docs_describe_public_metric_interval_frame() -> None:
 
     assert "build_public_metric_interval_frame" in reports_doc
     assert "resample draws" in reports_doc
+
+
+def test_reports_docs_describe_motionage_mapping_diagnostics_boundary() -> None:
+    reports_doc = (REPO_ROOT / "docs" / "reports" / "README.md").read_text(encoding="utf-8")
+
+    assert "build_public_motionage_mapping_frame" in reports_doc
+    assert "age-bin mapping diagnostics" in reports_doc
 
 
 def _make_hourly_plot_frame() -> pd.DataFrame:
@@ -221,3 +230,116 @@ def test_build_public_metric_interval_frame_keeps_only_aggregate_plot_fields() -
     ]
     assert "metrics_path" not in public_frame.columns
     assert "resample_draws" not in public_frame.columns
+
+
+def test_build_public_motionage_mapping_frame_keeps_only_aggregate_plot_fields() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "sex_value": 1,
+                "age_bin": 65,
+                "representative_probability": 0.042,
+                "fitted_probability": 0.045,
+                "logit_probability": -3.13,
+                "fitted_logit_probability": -3.05,
+                "n_participants": 128,
+                "source_path": "internal-run/mapping.csv",
+                "row_ids": ["a", "b"],
+            },
+            {
+                "sex_value": 2,
+                "age_bin": 70,
+                "representative_probability": 0.057,
+                "fitted_probability": 0.061,
+                "logit_probability": -2.81,
+                "fitted_logit_probability": -2.73,
+                "n_participants": 119,
+                "source_path": "internal-run/mapping.csv",
+                "row_ids": ["c", "d"],
+            },
+        ]
+    )
+
+    public_frame = build_public_motionage_mapping_frame(frame)
+
+    assert public_frame.to_dict("records") == [
+        {
+            "sex_value": 1,
+            "sex_label": "Male",
+            "age_bin": 65,
+            "representative_probability": 0.042,
+            "fitted_probability": 0.045,
+            "logit_probability": -3.13,
+            "fitted_logit_probability": -3.05,
+            "n_participants": 128,
+        },
+        {
+            "sex_value": 2,
+            "sex_label": "Female",
+            "age_bin": 70,
+            "representative_probability": 0.057,
+            "fitted_probability": 0.061,
+            "logit_probability": -2.81,
+            "fitted_logit_probability": -2.73,
+            "n_participants": 119,
+        },
+    ]
+    assert "source_path" not in public_frame.columns
+    assert "row_ids" not in public_frame.columns
+
+
+def test_plot_motionage_mapping_diagnostics_uses_age_bin_summary_inputs() -> None:
+    public_frame = build_public_motionage_mapping_frame(
+        pd.DataFrame(
+            [
+                {
+                    "sex_value": 1,
+                    "age_bin": 60,
+                    "representative_probability": 0.031,
+                    "fitted_probability": 0.034,
+                    "logit_probability": -3.44,
+                    "fitted_logit_probability": -3.35,
+                },
+                {
+                    "sex_value": 1,
+                    "age_bin": 70,
+                    "representative_probability": 0.053,
+                    "fitted_probability": 0.057,
+                    "logit_probability": -2.91,
+                    "fitted_logit_probability": -2.81,
+                },
+                {
+                    "sex_value": 2,
+                    "age_bin": 60,
+                    "representative_probability": 0.024,
+                    "fitted_probability": 0.027,
+                    "logit_probability": -3.71,
+                    "fitted_logit_probability": -3.58,
+                },
+                {
+                    "sex_value": 2,
+                    "age_bin": 70,
+                    "representative_probability": 0.046,
+                    "fitted_probability": 0.049,
+                    "logit_probability": -3.03,
+                    "fitted_logit_probability": -2.97,
+                },
+            ]
+        )
+    )
+
+    ax = plot_motionage_mapping_diagnostics(public_frame, title=None)
+
+    legend = ax.get_legend()
+    assert legend is not None
+    assert [text.get_text() for text in legend.get_texts()] == [
+        "Female observed",
+        "Female fitted",
+        "Male observed",
+        "Male fitted",
+    ]
+    assert ax.get_xlabel() == "Chronological age"
+    assert ax.get_ylabel() == "Representative mortality probability"
+    assert ax.get_title() == ""
+    assert len(ax.collections) == 2
+    assert len(ax.lines) == 2
