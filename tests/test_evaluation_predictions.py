@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from motionage.evaluation.predictions import (
+    aggregate_to_participant,
+    align_meta_to_predictions,
+    evaluate_binary_probability_splits,
+    participant_prediction_frame,
+)
+
+
+def test_align_meta_to_predictions_accepts_exact_length_and_optional_prefix() -> None:
+    meta = pd.DataFrame({"id": [101, 101, 102, 103], "start_idx": [0, 2, 0, 0]})
+
+    exact = align_meta_to_predictions(meta, sample_count=4)
+    prefix = align_meta_to_predictions(meta, sample_count=3, allow_prefix=True)
+
+    assert exact.equals(meta)
+    assert prefix["id"].tolist() == [101, 101, 102]
+    assert prefix.index.tolist() == [0, 1, 2]
+
+
+def test_aggregate_to_participant_averages_windows_and_preserves_first_target() -> None:
+    meta = pd.DataFrame({"id": [101, 101, 102], "start_idx": [0, 2, 0]})
+
+    probabilities, targets = aggregate_to_participant(
+        np.asarray([0.2, 0.6, 0.9]),
+        np.asarray([0, 0, 1]),
+        meta,
+    )
+
+    assert probabilities.tolist() == pytest.approx([0.4, 0.9])
+    assert targets.tolist() == [0, 1]
+
+
+def test_aggregate_to_participant_rejects_unaligned_metadata() -> None:
+    meta = pd.DataFrame({"id": [101, 101, 102, 102]})
+
+    with pytest.raises(ValueError, match="metadata length must match"):
+        aggregate_to_participant(np.asarray([0.2, 0.4, 0.8]), np.asarray([0, 0, 1]), meta)
+
+
+def test_participant_prediction_frame_handles_metadata_and_synthetic_ids() -> None:
+    meta = pd.DataFrame({"id": [101, 101, 102]})
+
+    with_meta = participant_prediction_frame(
+        np.asarray([0.2, 0.6, 0.9]),
+        np.asarray([0, 0, 1]),
+        meta=meta,
+        split="test",
+    )
+    without_meta = participant_prediction_frame(np.asarray([0.3, 0.7]), np.asarray([0, 1]))
+
+    assert with_meta.to_dict("records") == [
+        {"id": 101, "probability": 0.4, "target": 0, "split": "test"},
+        {"id": 102, "probability": 0.9, "target": 1, "split": "test"},
+    ]
+    assert without_meta["id"].tolist() == [0, 1]
+    assert without_meta["probability"].tolist() == [0.3, 0.7]
+    assert "split" not in without_meta.columns
+
+
+def test_evaluate_binary_probability_splits_selects_validation_threshold() -> None:
+    results = evaluate_binary_probability_splits(
+        {
+            "train": (np.asarray([0.1, 0.8, 0.2, 0.7]), np.asarray([0, 1, 0, 1])),
+            "val": (np.asarray([0.1, 0.4, 0.6, 0.8]), np.asarray([0, 0, 1, 1])),
+            "test": (np.asarray([0.2, 0.6, 0.7, 0.3]), np.asarray([0, 1, 1, 0])),
+        },
+        threshold_metric="balanced_accuracy",
+    )
+
+    assert results["meta"]["selected_threshold"] == pytest.approx(0.5)
+    assert results["meta"]["selected_threshold_score"] == pytest.approx(1.0)
+    assert results["meta"]["threshold_selection_source"] == "validation"
+    assert results["test"]["balanced_accuracy"] == pytest.approx(1.0)
+
+
+def test_evaluate_binary_probability_splits_uses_provided_threshold_without_validation() -> None:
+    results = evaluate_binary_probability_splits(
+        {
+            "train": (np.asarray([0.1, 0.8]), np.asarray([0, 1])),
+            "test": (np.asarray([0.2, 0.7]), np.asarray([0, 1])),
+        },
+        selected_threshold=0.7,
+        selected_threshold_score=0.83,
+        threshold_selection_source="winner_validation_selected_threshold",
+    )
+
+    assert results["meta"]["selected_threshold"] == pytest.approx(0.7)
+    assert results["meta"]["selected_threshold_score"] == pytest.approx(0.83)
+    assert results["meta"]["threshold_selection_source"] == "winner_validation_selected_threshold"
+    assert results["test"]["threshold"] == pytest.approx(0.7)
