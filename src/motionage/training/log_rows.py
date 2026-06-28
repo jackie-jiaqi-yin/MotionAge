@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+import csv
+from pathlib import Path
+from typing import Any, Mapping, Sequence
 
 from motionage.training.task import BINARY_CLASSIFICATION, REGRESSION, TaskType
 
@@ -78,3 +80,27 @@ def build_training_log_row(
         return row
 
     raise ValueError(f"Unsupported task_type '{task_type}'.")
+
+
+def training_log_fieldnames(rows: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    """Return CSV fieldnames from the first log row."""
+    if not rows:
+        return ()
+    return tuple(rows[0].keys())
+
+
+def write_training_log_csv(
+    rows: Sequence[Mapping[str, Any]],
+    path: str | Path,
+) -> bool:
+    """Write a non-empty training log to CSV and return whether a file was written."""
+    if not rows:
+        return False
+
+    csv_path = Path(path)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=training_log_fieldnames(rows))
+        writer.writeheader()
+        writer.writerows(rows)
+    return True

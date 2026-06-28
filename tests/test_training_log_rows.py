@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import math
 
 import pytest
@@ -120,3 +121,45 @@ def test_build_training_log_row_rejects_unknown_task_type() -> None:
             task_type="unsupported",
             selection_metric_name="mae",
         )
+
+
+def test_training_log_fieldnames_follow_first_row_order() -> None:
+    assert hasattr(training, "training_log_fieldnames")
+
+    rows = [
+        {"epoch": 1, "train_loss": 1.2, "val_loss": 1.1},
+        {"epoch": 2, "train_loss": 1.0, "val_loss": 0.9},
+    ]
+
+    assert training.training_log_fieldnames(rows) == ("epoch", "train_loss", "val_loss")
+    assert training.training_log_fieldnames([]) == ()
+
+
+def test_write_training_log_csv_writes_header_and_rows(tmp_path) -> None:
+    assert hasattr(training, "write_training_log_csv")
+
+    rows = [
+        {"epoch": 1, "train_loss": 1.2, "val_loss": 1.1},
+        {"epoch": 2, "train_loss": 1.0, "val_loss": 0.9},
+    ]
+    path = tmp_path / "metrics" / "training_log.csv"
+
+    wrote = training.write_training_log_csv(rows, path)
+
+    assert wrote is True
+    with path.open(newline="", encoding="utf-8") as f:
+        assert list(csv.DictReader(f)) == [
+            {"epoch": "1", "train_loss": "1.2", "val_loss": "1.1"},
+            {"epoch": "2", "train_loss": "1.0", "val_loss": "0.9"},
+        ]
+
+
+def test_write_training_log_csv_skips_empty_logs(tmp_path) -> None:
+    assert hasattr(training, "write_training_log_csv")
+
+    path = tmp_path / "metrics" / "training_log.csv"
+
+    wrote = training.write_training_log_csv([], path)
+
+    assert wrote is False
+    assert not path.exists()

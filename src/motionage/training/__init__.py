@@ -16,7 +16,12 @@ from motionage.training.freeze import (
 )
 from motionage.training.loss import build_loss_function
 from motionage.training.limits import optional_positive_int
-from motionage.training.log_rows import build_training_log_row, nan_validation_metrics
+from motionage.training.log_rows import (
+    build_training_log_row,
+    nan_validation_metrics,
+    training_log_fieldnames,
+    write_training_log_csv,
+)
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.optimizer import (
     OptimizerGroupSummary,
@@ -81,4 +86,6 @@ __all__ = [
     "selection_metric_direction",
     "selection_metric_name",
     "threshold_metric_name",
+    "training_log_fieldnames",
+    "write_training_log_csv",
 ]
