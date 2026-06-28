@@ -41,6 +41,13 @@ def test_load_paper_model_manifest_records_source_config_details() -> None:
 
     assert by_id["gru_fitbit_only"].source_model_type == "gru_binary"
     assert by_id["gru_fitbit_only"].prediction_mode is None
+    assert by_id["gru_fitbit_only"].architecture == {
+        "hidden_size": 64,
+        "num_layers": 2,
+        "dropout": 0.117,
+        "hour_emb_dim": 8,
+        "day_emb_dim": 2,
+    }
     assert by_id["gru_fitbit_only"].covariates_enabled is False
     assert by_id["gru_fitbit_only"].covariate_levels == ()
     assert by_id["gru_fitbit_only"].num_numeric_features is None
@@ -59,11 +66,29 @@ def test_load_paper_model_manifest_records_source_config_details() -> None:
     assert by_id["gru_level1_latefusion"].num_numeric_features == 8
     assert by_id["lstm_level1_residual"].source_model_type == "lstm_covariates_binary"
     assert by_id["lstm_level1_residual"].prediction_mode == "residual"
+    assert by_id["lstm_level1_residual"].architecture == {
+        "hidden_size": 64,
+        "num_layers": 2,
+        "dropout": 0.15,
+        "hour_emb_dim": 8,
+        "day_emb_dim": 4,
+    }
     assert by_id["lstm_level1_residual"].covariates_enabled is True
     assert by_id["lstm_level1_residual"].covariate_levels == ("1",)
     assert by_id["lstm_level1_residual"].seq_len == 1008
     assert by_id["lstm_level1_residual"].stride_ratio == 0.5
     assert by_id["transformer_level1_residual"].source_model_type == "transformer_covariates_binary"
+    assert by_id["transformer_level1_residual"].architecture == {
+        "d_model": 96,
+        "nhead": 4,
+        "num_layers": 3,
+        "dim_feedforward": 128,
+        "dropout": 0.188,
+        "hour_emb_dim": 16,
+        "day_emb_dim": 8,
+        "intensity_proj_dim": 16,
+        "max_seq_len": 1008,
+    }
     assert by_id["transformer_level1_residual"].covariate_levels == ("1",)
     assert by_id["transformer_level1_residual"].num_numeric_features == 8
     assert by_id["transformer_level1_residual"].seq_len == 576
@@ -307,12 +332,34 @@ def _default_study_metadata() -> dict[str, object]:
 
 
 def _source_config(model_type: str) -> dict[str, object]:
+    if model_type.startswith("transformer"):
+        model: dict[str, object] = {
+            "type": model_type,
+            "d_model": 96,
+            "nhead": 4,
+            "num_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.188,
+            "hour_emb_dim": 16,
+            "day_emb_dim": 8,
+            "intensity_proj_dim": 16,
+            "max_seq_len": 1008,
+        }
+    else:
+        model = {
+            "type": model_type,
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.1,
+            "hour_emb_dim": 8,
+            "day_emb_dim": 2,
+        }
     return {
         "task": {
             "type": "binary_classification",
             "selection_metric": "auprc",
         },
-        "model": {"type": model_type},
+        "model": model,
         "windowing": {
             "seq_len": 1008,
             "stride_ratio": 1.0,

@@ -9,6 +9,21 @@ from typing import Any, Sequence
 import yaml
 
 REQUIRED_PAPER_MODEL_FAMILIES = ("gru", "lstm", "transformer")
+ARCHITECTURE_FIELDS_BY_FAMILY = {
+    "gru": ("hidden_size", "num_layers", "dropout", "hour_emb_dim", "day_emb_dim"),
+    "lstm": ("hidden_size", "num_layers", "dropout", "hour_emb_dim", "day_emb_dim"),
+    "transformer": (
+        "d_model",
+        "nhead",
+        "num_layers",
+        "dim_feedforward",
+        "dropout",
+        "hour_emb_dim",
+        "day_emb_dim",
+        "intensity_proj_dim",
+        "max_seq_len",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -21,6 +36,7 @@ class PaperModelManifestEntry:
     source_model_type: str
     task_type: str
     prediction_mode: str | None
+    architecture: dict[str, int | float]
     covariates_enabled: bool
     covariate_levels: tuple[str, ...]
     num_numeric_features: int | None
@@ -137,6 +153,11 @@ def load_paper_model_manifest(
                 source_model_type=source_model_type,
                 task_type=task_type,
                 prediction_mode=str(prediction_mode) if prediction_mode is not None else None,
+                architecture=_resolve_architecture_metadata(
+                    family=family,
+                    model_cfg=model_cfg,
+                    source_config_path=source_config_path,
+                ),
                 covariates_enabled=covariates_enabled,
                 covariate_levels=covariate_levels,
                 num_numeric_features=num_numeric_features,
@@ -289,6 +310,37 @@ def _resolve_covariate_metadata(
             context=f"{source_config_path}.model",
         ),
     )
+
+
+def _resolve_architecture_metadata(
+    *,
+    family: str,
+    model_cfg: dict[str, Any],
+    source_config_path: str,
+) -> dict[str, int | float]:
+    fields = ARCHITECTURE_FIELDS_BY_FAMILY[family]
+    return {
+        field: _required_architecture_number(
+            model_cfg,
+            field,
+            context=f"{source_config_path}.model",
+        )
+        for field in fields
+    }
+
+
+def _required_architecture_number(
+    row: dict[str, Any],
+    key: str,
+    *,
+    context: str,
+) -> int | float:
+    value = row.get(key)
+    if not isinstance(value, (float, int)) or isinstance(value, bool):
+        raise ValueError(f"{context}.{key} must be a number.")
+    if value < 0:
+        raise ValueError(f"{context}.{key} must be non-negative.")
+    return value
 
 
 def _validate_model_type_matches_family(

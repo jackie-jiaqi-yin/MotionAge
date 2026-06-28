@@ -61,6 +61,13 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "source_model_type": "gru_binary",
         "task_type": "binary_classification",
         "prediction_mode": None,
+        "architecture": {
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.117,
+            "hour_emb_dim": 8,
+            "day_emb_dim": 2,
+        },
         "covariates_enabled": False,
         "covariate_levels": [],
         "num_numeric_features": None,
@@ -96,27 +103,31 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| official_feature_set | motionage_accel |" in captured.out
     assert "\n".join(
         [
-            "| Family | Model ID | Model type | Prediction mode | Covariates | Levels | "
-            "Numeric features | Seq len | Stride | Epochs | Batch | LR | Selection | "
-            "Source config |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+            "| Family | Model ID | Model type | Prediction mode | Architecture | Covariates | "
+            "Levels | Numeric features | Seq len | Stride | Epochs | Batch | LR | "
+            "Selection | Source config |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
             "--- | --- |",
         ]
     ) in captured.out
     assert (
-        "| gru | gru_fitbit_only | gru_binary | - | no | - | - | 1008 | 1.0 | 80 | 128 | "
-        "0.001 | auprc | configs/paper/gru_fitbit_only_60m.yaml |"
+        "| gru | gru_fitbit_only | gru_binary | - | hidden_size=64; num_layers=2; "
+        "dropout=0.117; hour_emb_dim=8; day_emb_dim=2 | no | - | - | 1008 | 1.0 | "
+        "80 | 128 | 0.001 | auprc | configs/paper/gru_fitbit_only_60m.yaml |"
         in captured.out
     )
     assert (
-        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | yes | 1 | 8 | "
+        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | hidden_size=64; "
+        "num_layers=2; dropout=0.15; hour_emb_dim=8; day_emb_dim=4 | yes | 1 | 8 | "
         "1008 | 0.5 | 80 | 128 | 0.001 | auprc | "
         "configs/paper/lstm_level1_residual_60m.yaml |"
         in captured.out
     )
     assert (
         "| transformer | transformer_level1_latefusion | transformer_covariates_binary | "
-        "late_fusion | yes | 1 | 8 | 576 | 1.0 | 80 | 64 | 0.00039 | auprc | "
+        "late_fusion | d_model=96; nhead=4; num_layers=3; dim_feedforward=128; "
+        "dropout=0.188; hour_emb_dim=16; day_emb_dim=8; intensity_proj_dim=16; "
+        "max_seq_len=1008 | yes | 1 | 8 | 576 | 1.0 | 80 | 64 | 0.00039 | auprc | "
         "configs/paper/transformer_level1_latefusion_60m.yaml |"
         in captured.out
     )
@@ -207,6 +218,13 @@ def test_validate_paper_models_cli_can_filter_json_by_model_id(
     assert payload["models"][0]["covariates_enabled"] is True
     assert payload["models"][0]["covariate_levels"] == ["1"]
     assert payload["models"][0]["num_numeric_features"] == 8
+    assert payload["models"][0]["architecture"] == {
+        "hidden_size": 64,
+        "num_layers": 2,
+        "dropout": 0.15,
+        "hour_emb_dim": 8,
+        "day_emb_dim": 4,
+    }
     assert (
         payload["models"][0]["source_config_path"]
         == "configs/paper/lstm_level1_residual_60m.yaml"
@@ -399,8 +417,9 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert markdown.startswith("## Study\n\n| Field | Value |\n")
     assert "| study_id | mortality_cv_primary_60m |" in markdown
     assert (
-        "## Models\n\n| Family | Model ID | Model type | Prediction mode | Covariates | Levels | "
-        "Numeric features | Seq len | Stride | Epochs | Batch | LR | Selection | Source config |"
+        "## Models\n\n| Family | Model ID | Model type | Prediction mode | Architecture | "
+        "Covariates | Levels | Numeric features | Seq len | Stride | Epochs | Batch | "
+        "LR | Selection | Source config |"
     ) in markdown
     assert "lstm_level1_residual" in markdown
 
@@ -604,12 +623,34 @@ def _write_yaml(path: Path, payload: object) -> None:
 
 
 def _source_config(model_type: str) -> dict[str, object]:
+    if model_type.startswith("transformer"):
+        model: dict[str, object] = {
+            "type": model_type,
+            "d_model": 96,
+            "nhead": 4,
+            "num_layers": 3,
+            "dim_feedforward": 128,
+            "dropout": 0.188,
+            "hour_emb_dim": 16,
+            "day_emb_dim": 8,
+            "intensity_proj_dim": 16,
+            "max_seq_len": 1008,
+        }
+    else:
+        model = {
+            "type": model_type,
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.1,
+            "hour_emb_dim": 8,
+            "day_emb_dim": 2,
+        }
     return {
         "task": {
             "type": "binary_classification",
             "selection_metric": "auprc",
         },
-        "model": {"type": model_type},
+        "model": model,
         "windowing": {
             "seq_len": 1008,
             "stride_ratio": 1.0,

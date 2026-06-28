@@ -281,14 +281,15 @@ def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) ->
     lines = [
         "## Models",
         "",
-        "| Family | Model ID | Model type | Prediction mode | Covariates | Levels | "
-        "Numeric features | Seq len | Stride | Epochs | Batch | LR | Selection | "
-        "Source config |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+        "| Family | Model ID | Model type | Prediction mode | Architecture | Covariates | "
+        "Levels | Numeric features | Seq len | Stride | Epochs | Batch | LR | "
+        "Selection | Source config |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
         "--- | --- |",
     ]
     for entry in entries:
         prediction_mode = entry.prediction_mode or "-"
+        architecture = _paper_model_architecture_markdown(entry.architecture)
         covariates = "yes" if entry.covariates_enabled else "no"
         covariate_levels = ", ".join(entry.covariate_levels) if entry.covariate_levels else "-"
         num_numeric_features = (
@@ -300,6 +301,7 @@ def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) ->
             f"{entry.model_id} | "
             f"{entry.source_model_type} | "
             f"{prediction_mode} | "
+            f"{architecture} | "
             f"{covariates} | "
             f"{covariate_levels} | "
             f"{num_numeric_features} | "
@@ -312,3 +314,7 @@ def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) ->
             f"{entry.source_config_path} |"
         )
     return "\n".join(lines)
+
+
+def _paper_model_architecture_markdown(architecture: dict[str, int | float]) -> str:
+    return "; ".join(f"{key}={value}" for key, value in architecture.items())
