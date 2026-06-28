@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from motionage.reporting.mortality_cv import (
     build_mortality_cv_summary_table,
@@ -250,6 +251,34 @@ def test_build_public_mortality_cv_summary_table_uses_reader_labels_and_omits_pr
     assert "stage2_experiment_id" not in table.columns
 
 
+def test_build_public_mortality_cv_summary_table_requires_public_labels() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "model_id": "gru_fitbit_only",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.81234,
+                "test_auroc_std": 0.01567,
+                "test_auprc_mean": 0.31234,
+                "test_auprc_std": 0.02567,
+                "test_logloss_mean": 0.48765,
+                "test_logloss_std": 0.01012,
+                "test_brier_mean": 0.18123,
+                "test_brier_std": 0.00567,
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Missing public labels"):
+        build_public_mortality_cv_summary_table(
+            summary,
+            model_labels={"gru_fitbit_only": "GRU wearable"},
+            feature_labels={},
+        )
+
+
 def test_build_public_mortality_cv_rank_table_orders_aggregate_model_rows() -> None:
     summary = pd.DataFrame(
         [
@@ -327,3 +356,26 @@ def test_build_public_mortality_cv_rank_table_orders_aggregate_model_rows() -> N
     assert "model_id" not in table.columns
     assert "stage2_experiment_id" not in table.columns
     assert "metrics_path" not in table.columns
+
+
+def test_build_public_mortality_cv_rank_table_requires_public_labels() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "model_id": "gru_level1_latefusion",
+                "stage2_experiment_id": "motionage_accel",
+                "fold_count": 5,
+                "is_official": True,
+                "test_auroc_mean": 0.836,
+                "test_auroc_std": 0.014,
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Missing public labels"):
+        build_public_mortality_cv_rank_table(
+            summary,
+            model_labels={},
+            feature_labels={"motionage_accel": "MotionAge acceleration"},
+            metric="test_auroc",
+        )

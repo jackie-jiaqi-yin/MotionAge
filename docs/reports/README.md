@@ -28,6 +28,8 @@ experiment paths from public tables.
 `build_public_mortality_cv_rank_table` ranks aggregate model rows by a selected
 summary metric such as AUROC or AUPRC while keeping only reader-facing labels,
 fold counts, metric means, fold SDs, and formatted mean/SD cells.
+Both public mortality-CV helpers require complete public label maps by default
+so report scripts fail before internal ids appear in exported tables.
 
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.

@@ -142,6 +142,7 @@ def build_public_mortality_cv_summary_table(
     model_labels: dict[str, str] | None = None,
     feature_labels: dict[str, str] | None = None,
     official_only: bool = True,
+    require_public_labels: bool = True,
     metric_columns: Sequence[str] = MORTALITY_CV_METRIC_COLUMNS,
     digits: int = 3,
     missing: str = "",
@@ -172,8 +173,18 @@ def build_public_mortality_cv_summary_table(
         feature_id = str(row["stage2_experiment_id"])
         rows.append(
             {
-                "model": model_labels.get(model_id, model_id),
-                "feature_set": feature_labels.get(feature_id, feature_id),
+                "model": _public_label(
+                    model_id,
+                    model_labels,
+                    label_type="model",
+                    required=require_public_labels,
+                ),
+                "feature_set": _public_label(
+                    feature_id,
+                    feature_labels,
+                    label_type="feature_set",
+                    required=require_public_labels,
+                ),
                 "fold_count": row["fold_count"],
                 **{metric: row[metric] for metric in metric_columns},
             }
@@ -189,6 +200,7 @@ def build_public_mortality_cv_rank_table(
     metric: str = "test_auroc",
     higher_is_better: bool = True,
     official_only: bool = True,
+    require_public_labels: bool = True,
     digits: int = 3,
     missing: str = "",
 ) -> pd.DataFrame:
@@ -245,8 +257,18 @@ def build_public_mortality_cv_rank_table(
         rows.append(
             {
                 "rank": int(rank),
-                "model": model_labels.get(model_id, model_id),
-                "feature_set": feature_labels.get(feature_id, feature_id),
+                "model": _public_label(
+                    model_id,
+                    model_labels,
+                    label_type="model",
+                    required=require_public_labels,
+                ),
+                "feature_set": _public_label(
+                    feature_id,
+                    feature_labels,
+                    label_type="feature_set",
+                    required=require_public_labels,
+                ),
                 "fold_count": int(row["fold_count"]),
                 "metric": str(metric),
                 "mean": mean,
@@ -256,6 +278,21 @@ def build_public_mortality_cv_rank_table(
         )
 
     return pd.DataFrame(rows, columns=output_columns)
+
+
+def _public_label(
+    value: str,
+    labels: dict[str, str],
+    *,
+    label_type: str,
+    required: bool,
+) -> str:
+    label = labels.get(value)
+    if label:
+        return label
+    if not required:
+        return value
+    raise ValueError(f"Missing public labels for {label_type}: {value}")
 
 
 def _require_columns(frame: pd.DataFrame, columns: list[str]) -> None:
