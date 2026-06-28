@@ -46,6 +46,7 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "analysis_template_path": "configs/paper/motionage_analysis.yaml",
         "official_feature_set": "motionage_accel",
     }
+    assert payload["output_filters"] == {"families": [], "model_ids": []}
     assert payload["model_count"] == 10
     assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
     assert payload["model_ids_by_family"]["lstm"] == [
@@ -153,6 +154,10 @@ def test_validate_paper_models_cli_can_filter_json_by_multiple_families(
     assert status == 0
     assert captured.err == ""
     assert payload["model_count"] == 6
+    assert payload["output_filters"] == {
+        "families": ["transformer", "lstm"],
+        "model_ids": [],
+    }
     assert payload["family_counts"] == {"lstm": 3, "transformer": 3}
     assert set(payload["model_ids_by_family"]) == {"lstm", "transformer"}
     assert {model["family"] for model in payload["models"]} == {"lstm", "transformer"}
@@ -177,6 +182,10 @@ def test_validate_paper_models_cli_can_filter_json_by_model_id(
     assert status == 0
     assert captured.err == ""
     assert payload["study"]["study_id"] == "mortality_cv_primary_60m"
+    assert payload["output_filters"] == {
+        "families": [],
+        "model_ids": ["lstm_level1_residual"],
+    }
     assert payload["model_count"] == 1
     assert payload["family_counts"] == {"lstm": 1}
     assert payload["model_ids_by_family"] == {"lstm": ["lstm_level1_residual"]}
@@ -206,6 +215,9 @@ def test_validate_paper_models_cli_can_filter_markdown_by_family_and_model_id(
     assert status == 0
     assert captured.err == ""
     assert "| study_id | mortality_cv_primary_60m |" in captured.out
+    assert "## Output Filters" in captured.out
+    assert "| families | transformer |" in captured.out
+    assert "| model_ids | transformer_level1_residual |" in captured.out
     assert "transformer_level1_residual" in captured.out
     assert "transformer_fitbit_only" not in captured.out
     assert "lstm_level1_residual" not in captured.out

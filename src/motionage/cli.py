@@ -126,19 +126,21 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
+    output_filters = _paper_model_output_filters(args.output_families, args.output_model_ids)
     family_counts = Counter(entry.family for entry in output_entries)
     if args.emit_json:
         study = load_paper_study_manifest(args.manifest_path)
         payload = _paper_model_manifest_payload(
             args.manifest_path,
             study,
+            output_filters,
             output_entries,
             family_counts,
         )
         output = f"{json.dumps(payload, indent=2)}\n"
     elif args.emit_markdown:
         study = load_paper_study_manifest(args.manifest_path)
-        output = f"{_paper_model_manifest_markdown(study, output_entries)}\n"
+        output = f"{_paper_model_manifest_markdown(study, output_filters, output_entries)}\n"
     else:
         output = _paper_model_manifest_text(args.manifest_path, output_entries, family_counts)
 
@@ -157,21 +159,18 @@ def _filter_manifest_entries(
     output_model_ids: Sequence[str] | None,
 ) -> tuple[PaperModelManifestEntry, ...]:
     selected = tuple(entries)
+    output_filters = _paper_model_output_filters(output_families, output_model_ids)
 
-    if output_families:
-        normalized_families = tuple(
-            dict.fromkeys(family.strip().lower() for family in output_families)
-        )
+    if output_filters["families"]:
+        normalized_families = tuple(output_filters["families"])
         observed_families = {entry.family for entry in entries}
         unknown_families = sorted(set(normalized_families) - observed_families)
         if unknown_families:
             raise ValueError(f"Unknown paper model family filters: {unknown_families}")
         selected = tuple(entry for entry in selected if entry.family in normalized_families)
 
-    if output_model_ids:
-        normalized_model_ids = tuple(
-            dict.fromkeys(model_id.strip() for model_id in output_model_ids)
-        )
+    if output_filters["model_ids"]:
+        normalized_model_ids = tuple(output_filters["model_ids"])
         observed_model_ids = {entry.model_id for entry in entries}
         unknown_model_ids = sorted(set(normalized_model_ids) - observed_model_ids)
         if unknown_model_ids:
@@ -181,6 +180,20 @@ def _filter_manifest_entries(
     if not selected:
         raise ValueError("No paper model entries matched output filters.")
     return selected
+
+
+def _paper_model_output_filters(
+    output_families: Sequence[str] | None,
+    output_model_ids: Sequence[str] | None,
+) -> dict[str, list[str]]:
+    return {
+        "families": list(
+            dict.fromkeys(family.strip().lower() for family in output_families or ())
+        ),
+        "model_ids": list(
+            dict.fromkeys(model_id.strip() for model_id in output_model_ids or ())
+        ),
+    }
 
 
 def _paper_model_manifest_text(
@@ -206,6 +219,7 @@ def _emit_output(output: str, output_path: Path | None) -> None:
 def _paper_model_manifest_payload(
     manifest_path: Path,
     study: PaperStudyManifest,
+    output_filters: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
     family_counts: Counter[str],
 ) -> dict[str, object]:
@@ -216,6 +230,7 @@ def _paper_model_manifest_payload(
     return {
         "manifest_path": str(manifest_path),
         "study": asdict(study),
+        "output_filters": output_filters,
         "model_count": len(entries),
         "family_counts": dict(sorted(family_counts.items())),
         "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
@@ -225,11 +240,13 @@ def _paper_model_manifest_payload(
 
 def _paper_model_manifest_markdown(
     study: PaperStudyManifest,
+    output_filters: dict[str, list[str]],
     entries: Sequence[PaperModelManifestEntry],
 ) -> str:
     return "\n\n".join(
         [
             _paper_study_manifest_markdown(study),
+            _paper_model_output_filters_markdown(output_filters),
             _paper_model_entries_markdown(entries),
         ]
     )
@@ -244,6 +261,19 @@ def _paper_study_manifest_markdown(study: PaperStudyManifest) -> str:
     ]
     for field, value in asdict(study).items():
         lines.append(f"| {field} | {value} |")
+    return "\n".join(lines)
+
+
+def _paper_model_output_filters_markdown(output_filters: dict[str, list[str]]) -> str:
+    lines = [
+        "## Output Filters",
+        "",
+        "| Filter | Values |",
+        "| --- | --- |",
+    ]
+    for key in ("families", "model_ids"):
+        values = ", ".join(output_filters[key]) if output_filters[key] else "-"
+        lines.append(f"| {key} | {values} |")
     return "\n".join(lines)
 
 
