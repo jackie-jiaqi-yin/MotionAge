@@ -24,6 +24,7 @@ from motionage.training.refit import (
     resolve_winner_trial,
 )
 from motionage.training.runtime import configure_torch_cpu_threads
+from motionage.training.scheduler import build_optimizer_and_scheduler
 from motionage.training.task import (
     BINARY_CLASSIFICATION,
     REGRESSION,
@@ -44,6 +45,7 @@ __all__ = [
     "align_meta_to_predictions",
     "apply_freeze_stage",
     "build_model_inputs",
+    "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
     "build_trainval_refit_splits",
     "configure_torch_cpu_threads",
