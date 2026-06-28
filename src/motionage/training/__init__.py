@@ -26,6 +26,7 @@ from motionage.training.refit import (
 )
 from motionage.training.runtime import configure_torch_cpu_threads
 from motionage.training.scheduler import build_optimizer_and_scheduler
+from motionage.training.selection import initial_best_metric, metric_improved
 from motionage.training.task import (
     BINARY_CLASSIFICATION,
     REGRESSION,
@@ -53,6 +54,8 @@ __all__ = [
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
     "is_binary_classification",
+    "initial_best_metric",
+    "metric_improved",
     "mps_diagnostics",
     "parse_freeze_schedule",
     "predict",
