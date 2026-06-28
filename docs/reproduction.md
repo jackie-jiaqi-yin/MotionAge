@@ -29,7 +29,7 @@ Equivalent top-level CLI form:
 uv run motionage validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
 ```
 
-This command validates the curated GRU, LSTM, and Transformer model families listed in `configs/paper/mortality_cv_primary_60m.yaml`. JSON output includes a `manifest_readiness` block with ready and not-ready aggregate counts; Markdown output includes the same information in a `Manifest Readiness` section. Use `--markdown --summary-only` when preparing a compact reader-facing summary of the same manifest metadata.
+This command validates the curated GRU, LSTM, and Transformer model families listed in `configs/paper/mortality_cv_primary_60m.yaml`. JSON output includes `public_boundary` and `manifest_readiness` blocks with public-scope and ready/not-ready aggregate counts; Markdown output includes the same information in `Public Boundary` and `Manifest Readiness` sections. Use `--markdown --summary-only` when preparing a compact reader-facing summary of the same manifest metadata.
 
 See the [CLI reference](cli.md) for the current public command list.
 

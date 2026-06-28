@@ -23,6 +23,14 @@ from motionage.paper_manifest import (
 )
 
 DOCTOR_DEPENDENCIES = ("numpy", "pandas", "pyyaml", "scipy", "scikit-learn", "torch")
+PAPER_MODEL_PUBLIC_BOUNDARY = {
+    "contains_raw_data": False,
+    "contains_participant_level_rows": False,
+    "contains_exact_split_ids": False,
+    "contains_trained_checkpoints": False,
+    "contains_private_notes": False,
+    "contains_public_config_metadata": True,
+}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -360,6 +368,7 @@ def _paper_model_manifest_payload(
         "study": asdict(study),
         "output_filters": output_filters,
         "validation_requirements": validation_requirements,
+        "public_boundary": dict(PAPER_MODEL_PUBLIC_BOUNDARY),
         "manifest_readiness": asdict(readiness),
         "model_summary": _paper_model_summary(entries),
         "model_count": len(entries),
@@ -386,6 +395,7 @@ def _paper_model_manifest_markdown(
     sections = [
         _paper_study_manifest_markdown(study),
         _paper_model_output_filters_markdown(output_filters),
+        _paper_model_public_boundary_markdown(PAPER_MODEL_PUBLIC_BOUNDARY),
         _paper_model_validation_requirements_markdown(validation_requirements),
         _paper_manifest_readiness_markdown(readiness),
         _paper_model_summary_markdown(entries),
@@ -417,6 +427,18 @@ def _paper_model_output_filters_markdown(output_filters: dict[str, list[str]]) -
     for key in ("families", "model_ids"):
         values = ", ".join(output_filters[key]) if output_filters[key] else "-"
         lines.append(f"| {key} | {values} |")
+    return "\n".join(lines)
+
+
+def _paper_model_public_boundary_markdown(public_boundary: dict[str, bool]) -> str:
+    lines = [
+        "## Public Boundary",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    for field, value in public_boundary.items():
+        lines.append(f"| {field} | {str(value).lower()} |")
     return "\n".join(lines)
 
 

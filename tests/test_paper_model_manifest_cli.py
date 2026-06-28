@@ -50,6 +50,14 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
     assert payload["validation_requirements"] == {
         "required_families": ["gru", "lstm", "transformer"]
     }
+    assert payload["public_boundary"] == {
+        "contains_raw_data": False,
+        "contains_participant_level_rows": False,
+        "contains_exact_split_ids": False,
+        "contains_trained_checkpoints": False,
+        "contains_private_notes": False,
+        "contains_public_config_metadata": True,
+    }
     assert payload["manifest_readiness"] == {
         "ready_model_count": 10,
         "not_ready_model_count": 0,
@@ -156,6 +164,13 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| n_folds | 5 |" in captured.out
     assert "| analysis_template_path | configs/paper/motionage_analysis.yaml |" in captured.out
     assert "| official_feature_set | motionage_accel |" in captured.out
+    assert "## Public Boundary" in captured.out
+    assert "| contains_raw_data | false |" in captured.out
+    assert "| contains_participant_level_rows | false |" in captured.out
+    assert "| contains_exact_split_ids | false |" in captured.out
+    assert "| contains_trained_checkpoints | false |" in captured.out
+    assert "| contains_private_notes | false |" in captured.out
+    assert "| contains_public_config_metadata | true |" in captured.out
     assert "## Validation Requirements" in captured.out
     assert "| Requirement | Values |" in captured.out
     assert "| required_families | gru, lstm, transformer |" in captured.out
@@ -172,6 +187,9 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| covariates | enabled | 7 |" in captured.out
     assert "| covariate_level | 1 | 6 |" in captured.out
     assert captured.out.index("## Output Filters") < captured.out.index(
+        "## Public Boundary"
+    )
+    assert captured.out.index("## Public Boundary") < captured.out.index(
         "## Validation Requirements"
     )
     assert captured.out.index("## Validation Requirements") < captured.out.index(

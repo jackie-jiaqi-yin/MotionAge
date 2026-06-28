@@ -20,6 +20,7 @@ def test_public_docs_include_paper_manifest_validation_recipe() -> None:
         assert "configs/paper/mortality_cv_primary_60m.yaml" in text
         assert "--summary-only" in text
         assert "manifest_readiness" in text
+        assert "public_boundary" in text
         assert "not-ready" in text
         for family in ("GRU", "LSTM", "Transformer"):
             assert family in text
@@ -34,6 +35,9 @@ def test_public_docs_include_cli_reference() -> None:
     assert "[CLI reference](cli.md)" in reproduction
     assert cli_reference.startswith("# CLI Reference\n")
     assert "Manifest Readiness" in cli_reference
+    assert "Public Boundary" in cli_reference
+    assert "contains_raw_data" in cli_reference
+    assert "contains_public_config_metadata" in cli_reference
     for command in (
         "uv run motionage --version",
         "uv run motionage doctor",
