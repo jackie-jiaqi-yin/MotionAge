@@ -202,6 +202,49 @@ def test_public_bootstrap_interval_table_preserves_public_context_labels_only() 
     assert "raw_resamples" not in table[0]
 
 
+def test_public_bootstrap_interval_table_resolves_comparison_id_to_public_label() -> None:
+    summaries = [
+        {
+            "metric": "paired AUROC delta",
+            "comparison_id": "motionage_frc_vs_phenoage",
+            "observed_auc_delta": 0.018,
+            "bootstrap_mean_delta": 0.017,
+            "ci95_lower": 0.004,
+            "ci95_upper": 0.032,
+            "ci_level": 0.95,
+            "n_resamples_requested": 2000,
+            "valid_resamples": 1998,
+        }
+    ]
+
+    table = public_bootstrap_interval_table(
+        summaries,
+        comparison_labels={"motionage_frc_vs_phenoage": "MotionAge-FRC - PhenoAge"},
+    )
+
+    assert table[0]["comparison"] == "MotionAge-FRC - PhenoAge"
+    assert "comparison_id" not in table[0]
+
+
+def test_public_bootstrap_interval_table_requires_public_comparison_labels() -> None:
+    summaries = [
+        {
+            "metric": "paired AUROC delta",
+            "comparison_id": "internal_comparison_key",
+            "observed_auc_delta": 0.018,
+            "bootstrap_mean_delta": 0.017,
+            "ci95_lower": 0.004,
+            "ci95_upper": 0.032,
+            "ci_level": 0.95,
+            "n_resamples_requested": 2000,
+            "valid_resamples": 1998,
+        }
+    ]
+
+    with pytest.raises(ValueError, match="Missing public comparison labels"):
+        public_bootstrap_interval_table(summaries)
+
+
 def test_public_paired_auc_interval_table_summarizes_public_comparison_rows() -> None:
     paired = pd.DataFrame(
         {

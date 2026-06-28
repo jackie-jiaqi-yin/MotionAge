@@ -129,6 +129,8 @@ def public_bootstrap_interval_table(
     summaries: Sequence[Mapping[str, object]],
     *,
     resampling_unit: str | None = None,
+    comparison_labels: Mapping[str, str] | None = None,
+    require_public_comparison_labels: bool = True,
 ) -> list[dict[str, str | float | int | bool]]:
     """Return allowlisted bootstrap interval rows for public report tables."""
     rows: list[dict[str, str | float | int | bool]] = []
@@ -137,6 +139,12 @@ def public_bootstrap_interval_table(
         if metric in (None, ""):
             raise ValueError(f"Bootstrap summary at index {index} must include metric.")
         comparison_value = summary.get("comparison")
+        if comparison_value in (None, "") and summary.get("comparison_id") not in (None, ""):
+            comparison_value = _public_comparison_label(
+                str(summary["comparison_id"]),
+                comparison_labels or {},
+                required=require_public_comparison_labels,
+            )
         comparison = None if comparison_value in (None, "") else str(comparison_value)
         rows.append(
             public_bootstrap_interval_row(
@@ -147,6 +155,20 @@ def public_bootstrap_interval_table(
             )
         )
     return rows
+
+
+def _public_comparison_label(
+    comparison_id: str,
+    labels: Mapping[str, str],
+    *,
+    required: bool,
+) -> str:
+    label = labels.get(comparison_id)
+    if label:
+        return label
+    if not required:
+        return comparison_id
+    raise ValueError(f"Missing public comparison labels for comparison_id: {comparison_id}")
 
 
 def public_paired_auc_interval_table(

@@ -16,6 +16,8 @@ optional p-values into public-safe rows. Public interval rows may retain
 `analysis` and `population` labels so multi-row robustness tables remain
 readable, but should not include raw resample draws, local bootstrap output paths,
 participant rows, private notes, or raw prediction tables.
+When interval summaries carry comparison ids, pass a reader-facing comparison
+label map before exporting public tables.
 For paired model comparisons, `public_paired_auc_interval_table` builds public
 pooled participant, stratified participant, and fold-stratified interval rows
 directly from an in-memory paired score frame. The resulting rows include only
