@@ -143,10 +143,12 @@ def test_public_boundary_issues_flags_non_release_manifest_entries(tmp_path: Pat
             "artifact id contains blocked public-boundary term: raw",
             "artifact path contains blocked public-boundary term: raw",
             "artifact path contains blocked public-boundary term: participant",
+            "artifact description contains blocked public-boundary term: raw",
         ],
         "model_checkpoint": [
             "artifact id contains blocked public-boundary term: checkpoint",
             "artifact path contains blocked public-boundary term: checkpoint",
+            "artifact description contains blocked public-boundary term: checkpoint",
             "artifact path uses blocked artifact extension: .ckpt",
         ],
         "reviewer_rebuttal": [
@@ -157,6 +159,32 @@ def test_public_boundary_issues_flags_non_release_manifest_entries(tmp_path: Pat
         "private_path": [
             "artifact id contains blocked public-boundary term: private",
             "artifact path contains blocked public-boundary term: private",
+            "artifact description contains blocked public-boundary term: private",
+        ],
+    }
+
+
+def test_public_boundary_issues_scans_descriptions(tmp_path: Path) -> None:
+    manifest = ArtifactManifest(
+        version=1,
+        root=tmp_path,
+        artifacts=(
+            ArtifactSpec(
+                "aggregate_auc_table",
+                Path("reports/auc_table.csv"),
+                "Aggregate table derived from raw participant rows.",
+                None,
+                True,
+            ),
+        ),
+    )
+
+    issues = public_boundary_issues(manifest)
+
+    assert issues == {
+        "aggregate_auc_table": [
+            "artifact description contains blocked public-boundary term: raw",
+            "artifact description contains blocked public-boundary term: participant",
         ],
     }
 
@@ -177,6 +205,7 @@ def test_validate_artifact_manifest_fails_public_boundary_issues(tmp_path: Path)
     assert report["public_boundary_issues"] == {
         "fold_checkpoint": [
             "artifact id contains blocked public-boundary term: checkpoint",
+            "artifact description contains blocked public-boundary term: weight",
             "artifact path uses blocked artifact extension: .pt",
         ]
     }

@@ -74,6 +74,7 @@ in git. The JSON report also includes a `summary` block with
 coverage before downloading or validating private artifact contents.
 
 The report also includes `public_boundary_issues`. This field flags manifest
-entries whose ids or paths look unsafe for the public repository boundary,
-including raw data, participant or subject rows, checkpoints, model weight
-files, private paths, and reviewer/rebuttal/OpenReview materials.
+entries whose ids, paths, descriptions, or other manifest metadata look unsafe
+for the public repository boundary, including raw data, participant or subject
+rows, checkpoints, model weight files, private paths, and restricted response
+materials.

@@ -102,6 +102,7 @@ def public_boundary_issues(manifest: ArtifactManifest) -> dict[str, list[str]]:
         artifact_issues: list[str] = []
         normalized_id = artifact.artifact_id.lower()
         normalized_path = artifact.path.as_posix().lower()
+        normalized_description = artifact.description.lower()
 
         for term in _BLOCKED_PUBLIC_BOUNDARY_TERMS:
             if term in normalized_id:
@@ -109,6 +110,9 @@ def public_boundary_issues(manifest: ArtifactManifest) -> dict[str, list[str]]:
         for term in _BLOCKED_PUBLIC_BOUNDARY_TERMS:
             if term in normalized_path:
                 artifact_issues.append(f"artifact path contains blocked public-boundary term: {term}")
+        for term in _BLOCKED_PUBLIC_BOUNDARY_TERMS:
+            if term in normalized_description:
+                artifact_issues.append(f"artifact description contains blocked public-boundary term: {term}")
 
         suffix = artifact.path.suffix.lower()
         if suffix in _BLOCKED_ARTIFACT_EXTENSIONS:
