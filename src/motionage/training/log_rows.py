@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -104,3 +105,79 @@ def write_training_log_csv(
         writer.writeheader()
         writer.writerows(rows)
     return True
+
+
+def build_public_training_log_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize per-epoch training logs without exposing the full local log."""
+    if not rows:
+        return {"logged_epoch_count": 0}
+
+    ordered_rows = sorted(rows, key=lambda row: int(row["epoch"]))
+    first_row = ordered_rows[0]
+    final_row = ordered_rows[-1]
+
+    summary: dict[str, Any] = {
+        "logged_epoch_count": len(ordered_rows),
+        "first_logged_epoch": int(first_row["epoch"]),
+        "last_logged_epoch": int(final_row["epoch"]),
+    }
+
+    freeze_stages = _ordered_unique_text_values(row.get("freeze_stage") for row in ordered_rows)
+    if freeze_stages:
+        summary["freeze_stages"] = freeze_stages
+
+    trainable_counts = [
+        int(row["trainable_param_count"])
+        for row in ordered_rows
+        if row.get("trainable_param_count") is not None
+    ]
+    if trainable_counts:
+        summary["trainable_param_count_min"] = min(trainable_counts)
+        summary["trainable_param_count_max"] = max(trainable_counts)
+
+    lr_mins = _numeric_values(row.get("lr_min") for row in ordered_rows)
+    lr_maxes = _numeric_values(row.get("lr_max") for row in ordered_rows)
+    if lr_mins:
+        summary["lr_min"] = min(lr_mins)
+    if lr_maxes:
+        summary["lr_max"] = max(lr_maxes)
+
+    for source_key, output_key in (
+        ("train_loss", "final_train_loss"),
+        ("val_loss", "final_val_loss"),
+    ):
+        if source_key in final_row:
+            summary[output_key] = final_row[source_key]
+
+    selection_metric_names = _ordered_unique_text_values(
+        row.get("selection_metric_name") for row in ordered_rows
+    )
+    if selection_metric_names:
+        summary["selection_metric_name"] = (
+            selection_metric_names[0] if len(selection_metric_names) == 1 else "mixed"
+        )
+
+    selection_metric_values = _numeric_values(
+        row.get("selection_metric_value") for row in ordered_rows
+    )
+    if selection_metric_values:
+        summary["selection_metric_value_min"] = min(selection_metric_values)
+        summary["selection_metric_value_max"] = max(selection_metric_values)
+
+    return summary
+
+
+def _ordered_unique_text_values(values: Sequence[Any]) -> list[str]:
+    return list(dict.fromkeys(str(value) for value in values if value not in (None, "")))
+
+
+def _numeric_values(values: Sequence[Any]) -> list[float]:
+    numeric_values: list[float] = []
+    for value in values:
+        if value is None:
+            continue
+        numeric_value = float(value)
+        if math.isnan(numeric_value):
+            continue
+        numeric_values.append(numeric_value)
+    return numeric_values

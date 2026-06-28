@@ -163,3 +163,60 @@ def test_write_training_log_csv_skips_empty_logs(tmp_path) -> None:
 
     assert wrote is False
     assert not path.exists()
+
+
+def test_build_public_training_log_summary_reports_aggregate_log_metadata() -> None:
+    assert hasattr(training, "build_public_training_log_summary")
+
+    rows = [
+        {
+            "epoch": 3,
+            "train_loss": 0.61,
+            "val_loss": 0.57,
+            "lr_min": 1.0e-5,
+            "lr_max": 1.0e-4,
+            "freeze_stage": "all-layers",
+            "trainable_param_count": 120,
+            "selection_metric_name": "auroc",
+            "selection_metric_value": 0.82,
+            "checkpoint_path": "local-checkpoints/fold0.pt",
+        },
+        {
+            "epoch": 1,
+            "train_loss": 0.74,
+            "val_loss": 0.66,
+            "lr_min": 1.0e-6,
+            "lr_max": 2.0e-5,
+            "freeze_stage": "head-only",
+            "trainable_param_count": 12,
+            "selection_metric_name": "auroc",
+            "selection_metric_value": 0.73,
+            "run_dir": "local-runs/fold0",
+        },
+    ]
+
+    summary = training.build_public_training_log_summary(rows)
+
+    assert summary == {
+        "logged_epoch_count": 2,
+        "first_logged_epoch": 1,
+        "last_logged_epoch": 3,
+        "freeze_stages": ["head-only", "all-layers"],
+        "trainable_param_count_min": 12,
+        "trainable_param_count_max": 120,
+        "lr_min": 1.0e-6,
+        "lr_max": 1.0e-4,
+        "final_train_loss": 0.61,
+        "final_val_loss": 0.57,
+        "selection_metric_name": "auroc",
+        "selection_metric_value_min": 0.73,
+        "selection_metric_value_max": 0.82,
+    }
+    assert "checkpoint_path" not in summary
+    assert "run_dir" not in summary
+
+
+def test_build_public_training_log_summary_handles_empty_logs() -> None:
+    assert hasattr(training, "build_public_training_log_summary")
+
+    assert training.build_public_training_log_summary([]) == {"logged_epoch_count": 0}

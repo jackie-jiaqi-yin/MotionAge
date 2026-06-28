@@ -19,6 +19,7 @@ from motionage.training.freeze import (
 from motionage.training.loss import build_loss_function, compute_validation_loss
 from motionage.training.limits import optional_positive_int
 from motionage.training.log_rows import (
+    build_public_training_log_summary,
     build_training_log_row,
     nan_validation_metrics,
     training_log_fieldnames,
@@ -74,6 +75,7 @@ __all__ = [
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
+    "build_public_training_log_summary",
     "build_public_training_report_row",
     "build_train_epoch_metrics",
     "build_training_log_row",
