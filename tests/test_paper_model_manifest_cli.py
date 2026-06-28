@@ -61,6 +61,12 @@ def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureF
         "source_model_type": "gru_binary",
         "task_type": "binary_classification",
         "prediction_mode": None,
+        "selection_metric": "auprc",
+        "seq_len": 1008,
+        "stride_ratio": 1.0,
+        "max_epochs": 80,
+        "batch_size": 128,
+        "learning_rate": 0.001,
     }
 
 
@@ -87,22 +93,26 @@ def test_validate_paper_models_cli_can_emit_markdown_table(capsys: pytest.Captur
     assert "| official_feature_set | motionage_accel |" in captured.out
     assert "\n".join(
         [
-            "| Family | Model ID | Model type | Prediction mode | Source config |",
-            "| --- | --- | --- | --- | --- |",
+            "| Family | Model ID | Model type | Prediction mode | Seq len | Stride | "
+            "Epochs | Batch | LR | Selection | Source config |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     ) in captured.out
     assert (
-        "| gru | gru_fitbit_only | gru_binary | - | configs/paper/gru_fitbit_only_60m.yaml |"
+        "| gru | gru_fitbit_only | gru_binary | - | 1008 | 1.0 | 80 | 128 | 0.001 | "
+        "auprc | configs/paper/gru_fitbit_only_60m.yaml |"
         in captured.out
     )
     assert (
-        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | "
+        "| lstm | lstm_level1_residual | lstm_covariates_binary | residual | 1008 | "
+        "0.5 | 80 | 128 | 0.001 | auprc | "
         "configs/paper/lstm_level1_residual_60m.yaml |"
         in captured.out
     )
     assert (
         "| transformer | transformer_level1_latefusion | transformer_covariates_binary | "
-        "late_fusion | configs/paper/transformer_level1_latefusion_60m.yaml |"
+        "late_fusion | 576 | 1.0 | 80 | 64 | 0.00039 | auprc | "
+        "configs/paper/transformer_level1_latefusion_60m.yaml |"
         in captured.out
     )
 
@@ -380,7 +390,10 @@ def test_validate_paper_models_cli_can_write_markdown_output_file(
     assert captured.err == ""
     assert markdown.startswith("## Study\n\n| Field | Value |\n")
     assert "| study_id | mortality_cv_primary_60m |" in markdown
-    assert "## Models\n\n| Family | Model ID | Model type | Prediction mode | Source config |" in markdown
+    assert (
+        "## Models\n\n| Family | Model ID | Model type | Prediction mode | Seq len | Stride | "
+        "Epochs | Batch | LR | Selection | Source config |"
+    ) in markdown
     assert "lstm_level1_residual" in markdown
 
 
@@ -394,7 +407,7 @@ def test_validate_paper_models_cli_returns_error_for_invalid_manifest(
     config_dir.mkdir(parents=True)
     _write_yaml(
         config_dir / "gru_only.yaml",
-        {"task": {"type": "binary_classification"}, "model": {"type": "gru_binary"}},
+        _source_config("gru_binary"),
     )
     _write_yaml(
         config_dir / "motionage_analysis.yaml",
@@ -580,3 +593,22 @@ def test_validate_paper_models_console_script_output_file_with_model_id_filter(t
 
 def _write_yaml(path: Path, payload: object) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def _source_config(model_type: str) -> dict[str, object]:
+    return {
+        "task": {
+            "type": "binary_classification",
+            "selection_metric": "auprc",
+        },
+        "model": {"type": model_type},
+        "windowing": {
+            "seq_len": 1008,
+            "stride_ratio": 1.0,
+        },
+        "training": {
+            "max_epochs": 80,
+            "batch_size": 128,
+            "learning_rate": 0.001,
+        },
+    }

@@ -41,11 +41,22 @@ def test_load_paper_model_manifest_records_source_config_details() -> None:
 
     assert by_id["gru_fitbit_only"].source_model_type == "gru_binary"
     assert by_id["gru_fitbit_only"].prediction_mode is None
+    assert by_id["gru_fitbit_only"].selection_metric == "auprc"
+    assert by_id["gru_fitbit_only"].seq_len == 1008
+    assert by_id["gru_fitbit_only"].stride_ratio == 1.0
+    assert by_id["gru_fitbit_only"].max_epochs == 80
+    assert by_id["gru_fitbit_only"].batch_size == 128
+    assert by_id["gru_fitbit_only"].learning_rate == 0.001
     assert by_id["gru_level1_latefusion"].source_model_type == "gru_covariates_binary"
     assert by_id["gru_level1_latefusion"].prediction_mode == "late_fusion"
     assert by_id["lstm_level1_residual"].source_model_type == "lstm_covariates_binary"
     assert by_id["lstm_level1_residual"].prediction_mode == "residual"
+    assert by_id["lstm_level1_residual"].seq_len == 1008
+    assert by_id["lstm_level1_residual"].stride_ratio == 0.5
     assert by_id["transformer_level1_residual"].source_model_type == "transformer_covariates_binary"
+    assert by_id["transformer_level1_residual"].seq_len == 576
+    assert by_id["transformer_level1_residual"].batch_size == 64
+    assert by_id["transformer_level1_residual"].learning_rate == 0.00039
 
 
 def test_load_paper_study_manifest_records_public_study_metadata() -> None:
@@ -72,7 +83,7 @@ def test_validate_paper_model_manifest_rejects_missing_family_or_type_mismatch(
     config_dir.mkdir(parents=True)
     _write_yaml(
         config_dir / "gru_only.yaml",
-        {"task": {"type": "binary_classification"}, "model": {"type": "gru_binary"}},
+        _source_config("gru_binary"),
     )
     _write_yaml(
         config_dir / "motionage_analysis.yaml",
@@ -260,10 +271,7 @@ def _write_manifest_with_models(
     for family in {model["family"] for model in models}:
         _write_yaml(
             config_dir / f"{family}_primary.yaml",
-            {
-                "task": {"type": "binary_classification"},
-                "model": {"type": f"{family}_binary"},
-            },
+            _source_config(f"{family}_binary"),
         )
 
     manifest = config_dir / "manifest.yaml"
@@ -283,6 +291,25 @@ def _default_study_metadata() -> dict[str, object]:
         "training_seed": 42,
         "analysis_template_path": "configs/paper/motionage_analysis.yaml",
         "official_feature_set": "motionage_accel",
+    }
+
+
+def _source_config(model_type: str) -> dict[str, object]:
+    return {
+        "task": {
+            "type": "binary_classification",
+            "selection_metric": "auprc",
+        },
+        "model": {"type": model_type},
+        "windowing": {
+            "seq_len": 1008,
+            "stride_ratio": 1.0,
+        },
+        "training": {
+            "max_epochs": 80,
+            "batch_size": 128,
+            "learning_rate": 0.001,
+        },
     }
 
 

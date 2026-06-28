@@ -281,8 +281,9 @@ def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) ->
     lines = [
         "## Models",
         "",
-        "| Family | Model ID | Model type | Prediction mode | Source config |",
-        "| --- | --- | --- | --- | --- |",
+        "| Family | Model ID | Model type | Prediction mode | Seq len | Stride | "
+        "Epochs | Batch | LR | Selection | Source config |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for entry in entries:
         prediction_mode = entry.prediction_mode or "-"
@@ -292,6 +293,12 @@ def _paper_model_entries_markdown(entries: Sequence[PaperModelManifestEntry]) ->
             f"{entry.model_id} | "
             f"{entry.source_model_type} | "
             f"{prediction_mode} | "
+            f"{entry.seq_len} | "
+            f"{entry.stride_ratio} | "
+            f"{entry.max_epochs} | "
+            f"{entry.batch_size} | "
+            f"{entry.learning_rate} | "
+            f"{entry.selection_metric} | "
             f"{entry.source_config_path} |"
         )
     return "\n".join(lines)

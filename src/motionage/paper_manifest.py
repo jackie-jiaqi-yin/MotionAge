@@ -21,6 +21,12 @@ class PaperModelManifestEntry:
     source_model_type: str
     task_type: str
     prediction_mode: str | None
+    selection_metric: str
+    seq_len: int
+    stride_ratio: float
+    max_epochs: int
+    batch_size: int
+    learning_rate: float
 
 
 @dataclass(frozen=True)
@@ -91,6 +97,11 @@ def load_paper_model_manifest(
         task_type = str(task_cfg.get("type", "")).strip()
         if task_type != "binary_classification":
             raise ValueError(f"{source_config_path} task.type must be binary_classification.")
+        selection_metric = _required_text(
+            task_cfg,
+            "selection_metric",
+            context=f"{source_config_path}.task",
+        )
 
         model_cfg = source_config.get("model")
         if not isinstance(model_cfg, dict):
@@ -102,6 +113,13 @@ def load_paper_model_manifest(
             source_config_path=source_config_path,
         )
 
+        windowing_cfg = source_config.get("windowing")
+        if not isinstance(windowing_cfg, dict):
+            raise ValueError(f"{source_config_path} must define a windowing mapping.")
+        training_cfg = source_config.get("training")
+        if not isinstance(training_cfg, dict):
+            raise ValueError(f"{source_config_path} must define a training mapping.")
+
         prediction_mode = model_cfg.get("prediction_mode")
         entries.append(
             PaperModelManifestEntry(
@@ -111,6 +129,32 @@ def load_paper_model_manifest(
                 source_model_type=source_model_type,
                 task_type=task_type,
                 prediction_mode=str(prediction_mode) if prediction_mode is not None else None,
+                selection_metric=selection_metric,
+                seq_len=_required_positive_int(
+                    windowing_cfg,
+                    "seq_len",
+                    context=f"{source_config_path}.windowing",
+                ),
+                stride_ratio=_required_positive_float(
+                    windowing_cfg,
+                    "stride_ratio",
+                    context=f"{source_config_path}.windowing",
+                ),
+                max_epochs=_required_positive_int(
+                    training_cfg,
+                    "max_epochs",
+                    context=f"{source_config_path}.training",
+                ),
+                batch_size=_required_positive_int(
+                    training_cfg,
+                    "batch_size",
+                    context=f"{source_config_path}.training",
+                ),
+                learning_rate=_required_positive_float(
+                    training_cfg,
+                    "learning_rate",
+                    context=f"{source_config_path}.training",
+                ),
             )
         )
 
@@ -195,6 +239,16 @@ def _required_positive_int(row: dict[str, Any], key: str, *, context: str) -> in
     if value <= 0:
         raise ValueError(f"{context}.{key} must be a positive integer.")
     return value
+
+
+def _required_positive_float(row: dict[str, Any], key: str, *, context: str) -> float:
+    value = row.get(key)
+    if not isinstance(value, (float, int)) or isinstance(value, bool):
+        raise ValueError(f"{context}.{key} must be a number.")
+    numeric_value = float(value)
+    if numeric_value <= 0:
+        raise ValueError(f"{context}.{key} must be positive.")
+    return numeric_value
 
 
 def _validate_model_type_matches_family(
