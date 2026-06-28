@@ -13,6 +13,10 @@ from motionage.training.freeze import (
     resolve_freeze_stage,
 )
 from motionage.training.model_inputs import build_model_inputs
+from motionage.training.optimizer import (
+    OptimizerGroupSummary,
+    build_optimizer_parameter_groups,
+)
 from motionage.training.refit import (
     build_trainval_refit_splits,
     resolve_final_refit_config,
@@ -33,11 +37,13 @@ from motionage.training.task import (
 __all__ = [
     "BINARY_CLASSIFICATION",
     "FreezeStage",
+    "OptimizerGroupSummary",
     "REGRESSION",
     "aggregate_to_participant",
     "align_meta_to_predictions",
     "apply_freeze_stage",
     "build_model_inputs",
+    "build_optimizer_parameter_groups",
     "build_trainval_refit_splits",
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
