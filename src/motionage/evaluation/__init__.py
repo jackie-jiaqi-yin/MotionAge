@@ -20,6 +20,7 @@ from motionage.evaluation.predictions import (
     evaluate_binary_probability_splits,
     participant_prediction_frame,
 )
+from motionage.evaluation.secondary import evaluate_secondary_feature_sets
 
 __all__ = [
     "aggregate_to_participant",
@@ -35,6 +36,7 @@ __all__ = [
     "build_public_binary_evaluation_table",
     "compute_all_metrics",
     "evaluate_binary_probability_splits",
+    "evaluate_secondary_feature_sets",
     "logits_to_probabilities",
     "participant_prediction_frame",
     "select_binary_threshold",

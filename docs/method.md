@@ -35,6 +35,10 @@ Secondary evaluation compares chronological age, benchmark biological-age measur
 - paired confidence intervals,
 - robustness and sensitivity analyses.
 
+Public second-stage logistic comparisons can use `evaluate_secondary_feature_sets`
+to produce aggregate-only train/test metric rows for MotionAge, MotionAgeAccel,
+and benchmark feature sets.
+
 Binary evaluation summaries should include aggregate split context only:
 `n`, `events`, `non_events`, and `event_rate`. These counts make metrics
 auditable without exposing participant rows or split ID files.
