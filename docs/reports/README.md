@@ -24,5 +24,7 @@ artifact inputs without hard-coding private experiment paths.
 
 Source-prediction reports should use
 `motionage.analysis.motionage.summarize_source_predictions` to publish split-level
-counts, event rates, window totals, and probability summaries. Do not commit
-source prediction tables that contain one row per participant.
+counts, event rates, window totals, and probability summaries. Use
+`motionage.analysis.motionage.build_public_source_prediction_report_table` when a
+report needs side-by-side GRU, LSTM, Transformer, or local source-model rows. Do
+not commit source prediction tables that contain one row per participant.

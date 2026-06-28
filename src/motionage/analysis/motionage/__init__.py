@@ -8,6 +8,7 @@ from motionage.analysis.motionage.mapping import (
     mapping_to_jsonable,
 )
 from motionage.analysis.motionage.source_predictions import (
+    build_public_source_prediction_report_table,
     build_participant_source_predictions,
     logits_to_probabilities,
     summarize_source_predictions,
@@ -17,6 +18,7 @@ __all__ = [
     "LogisticInverseGroupFit",
     "MotionAgeMapping",
     "apply_motionage_mapping",
+    "build_public_source_prediction_report_table",
     "build_participant_source_predictions",
     "fit_motionage_mapping",
     "logits_to_probabilities",

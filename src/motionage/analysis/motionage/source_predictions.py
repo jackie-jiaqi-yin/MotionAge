@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+
 import numpy as np
 import pandas as pd
 
@@ -149,6 +151,37 @@ def summarize_source_predictions(
             }
         )
         rows.append(row)
+    return rows
+
+
+def build_public_source_prediction_report_table(
+    source_predictions: Mapping[str, pd.DataFrame] | Iterable[tuple[str, pd.DataFrame]],
+    *,
+    split_column: str = "split",
+    target_column: str | None = None,
+    participant_probability_column: str = "participant_probability",
+    n_windows_column: str = "n_windows",
+    source_model_column: str = "source_model",
+) -> list[dict[str, float | int | str]]:
+    """Build aggregate public report rows for one or more source models."""
+    items = source_predictions.items() if isinstance(source_predictions, Mapping) else source_predictions
+
+    rows: list[dict[str, float | int | str]] = []
+    for source_model, participants in items:
+        source_label = str(source_model).strip()
+        if not source_label:
+            raise ValueError("Source model labels must be non-empty.")
+        summary_rows = summarize_source_predictions(
+            participants,
+            split_column=split_column,
+            target_column=target_column,
+            participant_probability_column=participant_probability_column,
+            n_windows_column=n_windows_column,
+        )
+        rows.extend({source_model_column: source_label, **row} for row in summary_rows)
+
+    if not rows:
+        raise ValueError("At least one source prediction table is required.")
     return rows
 
 

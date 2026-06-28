@@ -28,6 +28,9 @@ MotionAgeAccel_i = MotionAge_i - chronological_age_i
 aggregation step for synthetic or local run outputs only: it converts
 window-level logits or probabilities into participant-level mean probability,
 optional participant logit, split label, target, and window count.
+`build_public_source_prediction_report_table` then combines aggregate-only
+source-model summaries for GRU, LSTM, Transformer, or another local source
+model label without exposing participant rows, checkpoint paths, or split IDs.
 
 The mapping is fit by sex using training participants only. Public configs should expose the fit partitions, clipping epsilon, weighting behavior, and whether mapped ages are clamped to the fit age range.
 
