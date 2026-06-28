@@ -53,6 +53,12 @@ def test_validate_artifacts_cli_reports_complete_bundle(tmp_path: Path, capsys) 
     assert exit_code == 0
     assert report["ok"] is True
     assert report["present"] == ["participant_predictions"]
+    assert report["summary"] == {
+        "total_artifacts": 1,
+        "required_artifacts": 1,
+        "optional_artifacts": 0,
+        "checksum_protected_artifacts": 0,
+    }
 
 
 def test_validate_artifacts_cli_fails_missing_required(tmp_path: Path, capsys) -> None:
@@ -74,6 +80,12 @@ def test_validate_artifacts_cli_fails_missing_required(tmp_path: Path, capsys) -
     assert exit_code == 1
     assert report["ok"] is False
     assert report["missing_required"] == ["participant_predictions"]
+    assert report["summary"] == {
+        "total_artifacts": 1,
+        "required_artifacts": 1,
+        "optional_artifacts": 0,
+        "checksum_protected_artifacts": 0,
+    }
 
 
 def test_validate_artifacts_cli_can_fail_on_missing_optional(tmp_path: Path, capsys) -> None:
@@ -103,3 +115,9 @@ def test_validate_artifacts_cli_can_fail_on_missing_optional(tmp_path: Path, cap
     assert exit_code == 1
     assert report["ok"] is True
     assert report["missing_optional"] == ["optional"]
+    assert report["summary"] == {
+        "total_artifacts": 2,
+        "required_artifacts": 1,
+        "optional_artifacts": 1,
+        "checksum_protected_artifacts": 0,
+    }

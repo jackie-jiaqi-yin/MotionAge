@@ -76,6 +76,19 @@ def validate_artifact_manifest(manifest: ArtifactManifest) -> dict[str, Any]:
         "missing_required": missing_required,
         "missing_optional": missing_optional,
         "checksum_mismatches": checksum_mismatches,
+        "summary": summarize_artifact_manifest(manifest),
+    }
+
+
+def summarize_artifact_manifest(manifest: ArtifactManifest) -> dict[str, int]:
+    """Summarize manifest requirements without inspecting artifact contents."""
+    return {
+        "total_artifacts": len(manifest.artifacts),
+        "required_artifacts": sum(1 for artifact in manifest.artifacts if artifact.required),
+        "optional_artifacts": sum(1 for artifact in manifest.artifacts if not artifact.required),
+        "checksum_protected_artifacts": sum(
+            1 for artifact in manifest.artifacts if artifact.sha256 is not None
+        ),
     }
 
 

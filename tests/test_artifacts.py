@@ -6,12 +6,25 @@ from pathlib import Path
 import pytest
 import yaml
 
+import motionage.artifacts as motionage_artifacts
 from motionage.artifacts import (
     ArtifactManifest,
     ArtifactSpec,
     load_artifact_manifest,
     validate_artifact_manifest,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_artifact_policy_documents_manifest_summary_output() -> None:
+    artifact_policy = (REPO_ROOT / "docs" / "artifacts.md").read_text(encoding="utf-8")
+
+    assert "summary" in artifact_policy
+    assert "total_artifacts" in artifact_policy
+    assert "required_artifacts" in artifact_policy
+    assert "optional_artifacts" in artifact_policy
+    assert "checksum_protected_artifacts" in artifact_policy
 
 
 def test_load_artifact_manifest_resolves_relative_paths_and_expected_checksums(tmp_path: Path) -> None:
@@ -57,6 +70,30 @@ def test_load_artifact_manifest_resolves_relative_paths_and_expected_checksums(t
     assert manifest.artifacts[0].resolve(artifact_dir) == predictions
 
 
+def test_summarize_artifact_manifest_counts_required_optional_and_checksum_files(
+    tmp_path: Path,
+) -> None:
+    assert hasattr(motionage_artifacts, "summarize_artifact_manifest")
+    manifest = ArtifactManifest(
+        version=1,
+        root=tmp_path,
+        artifacts=(
+            ArtifactSpec("required_with_hash", Path("a.csv"), "Required hashed.", "a" * 64, True),
+            ArtifactSpec("required_no_hash", Path("b.csv"), "Required unhashed.", None, True),
+            ArtifactSpec("optional_no_hash", Path("c.csv"), "Optional unhashed.", None, False),
+        ),
+    )
+
+    summary = motionage_artifacts.summarize_artifact_manifest(manifest)
+
+    assert summary == {
+        "total_artifacts": 3,
+        "required_artifacts": 2,
+        "optional_artifacts": 1,
+        "checksum_protected_artifacts": 1,
+    }
+
+
 def test_validate_artifact_manifest_reports_missing_and_checksum_failures(tmp_path: Path) -> None:
     present = tmp_path / "present.csv"
     present.write_text("x\n1\n", encoding="utf-8")
@@ -77,6 +114,12 @@ def test_validate_artifact_manifest_reports_missing_and_checksum_failures(tmp_pa
     assert report["missing_optional"] == ["optional"]
     assert report["checksum_mismatches"] == ["present"]
     assert report["present"] == ["present"]
+    assert report["summary"] == {
+        "total_artifacts": 3,
+        "required_artifacts": 2,
+        "optional_artifacts": 1,
+        "checksum_protected_artifacts": 1,
+    }
 
 
 def test_validate_artifact_manifest_passes_complete_bundle(tmp_path: Path) -> None:
@@ -104,6 +147,12 @@ def test_validate_artifact_manifest_passes_complete_bundle(tmp_path: Path) -> No
         "missing_required": [],
         "missing_optional": [],
         "checksum_mismatches": [],
+        "summary": {
+            "total_artifacts": 1,
+            "required_artifacts": 1,
+            "optional_artifacts": 0,
+            "checksum_protected_artifacts": 1,
+        },
     }
 
 

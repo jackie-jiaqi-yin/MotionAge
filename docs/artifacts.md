@@ -68,4 +68,7 @@ artifacts:
 
 The manifest helper reports present files, missing required files, missing
 optional files, and checksum mismatches without requiring artifacts to be stored
-in git.
+in git. The JSON report also includes a `summary` block with
+`total_artifacts`, `required_artifacts`, `optional_artifacts`, and
+`checksum_protected_artifacts` counts so readers can inspect expected bundle
+coverage before downloading or validating private artifact contents.
