@@ -13,6 +13,7 @@ from motionage.training.freeze import (
     parse_freeze_schedule,
     resolve_freeze_stage,
 )
+from motionage.training.loss import build_loss_function
 from motionage.training.model_inputs import build_model_inputs
 from motionage.training.optimizer import (
     OptimizerGroupSummary,
@@ -44,6 +45,7 @@ __all__ = [
     "aggregate_to_participant",
     "align_meta_to_predictions",
     "apply_freeze_stage",
+    "build_loss_function",
     "build_model_inputs",
     "build_optimizer_and_scheduler",
     "build_optimizer_parameter_groups",
