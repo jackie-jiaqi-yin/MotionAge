@@ -7,7 +7,11 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from motionage.evaluation.metrics import compute_all_metrics, select_binary_threshold
+from motionage.evaluation.metrics import (
+    build_public_binary_evaluation_row,
+    compute_all_metrics,
+    select_binary_threshold,
+)
 
 
 def align_meta_to_predictions(
@@ -165,3 +169,37 @@ def evaluate_binary_probability_splits(
         "threshold_selection_source": str(selection_source),
     }
     return results
+
+
+def build_public_binary_evaluation_table(
+    split_metrics: Mapping[str, Mapping[str, object]],
+    *,
+    model: str | None = None,
+) -> list[dict[str, object]]:
+    """Build public aggregate evaluation rows from split-level binary metrics."""
+    meta = split_metrics.get("meta", {})
+    threshold_metadata = _public_threshold_metadata(meta)
+
+    rows: list[dict[str, object]] = []
+    for split_name, metrics in split_metrics.items():
+        if split_name == "meta":
+            continue
+        row = build_public_binary_evaluation_row(metrics, model=model, split=split_name)
+        row.update(threshold_metadata)
+        rows.append(row)
+    if not rows:
+        raise ValueError("At least one non-meta split is required.")
+    return rows
+
+
+def _public_threshold_metadata(meta: Mapping[str, object]) -> dict[str, object]:
+    metadata: dict[str, object] = {}
+    for key in (
+        "threshold_metric",
+        "selected_threshold",
+        "selected_threshold_score",
+        "threshold_selection_source",
+    ):
+        if key in meta:
+            metadata[key] = meta[key]
+    return metadata

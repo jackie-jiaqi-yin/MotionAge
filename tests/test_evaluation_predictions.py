@@ -7,6 +7,7 @@ import pytest
 from motionage.evaluation.predictions import (
     aggregate_to_participant,
     align_meta_to_predictions,
+    build_public_binary_evaluation_table,
     evaluate_binary_probability_splits,
     participant_prediction_frame,
 )
@@ -98,3 +99,28 @@ def test_evaluate_binary_probability_splits_uses_provided_threshold_without_vali
     assert results["meta"]["selected_threshold_score"] == pytest.approx(0.83)
     assert results["meta"]["threshold_selection_source"] == "winner_validation_selected_threshold"
     assert results["test"]["threshold"] == pytest.approx(0.7)
+
+
+def test_build_public_binary_evaluation_table_adds_threshold_metadata() -> None:
+    results = evaluate_binary_probability_splits(
+        {
+            "train": (np.asarray([0.1, 0.8, 0.2, 0.7]), np.asarray([0, 1, 0, 1])),
+            "val": (np.asarray([0.1, 0.4, 0.6, 0.8]), np.asarray([0, 0, 1, 1])),
+            "test": (np.asarray([0.2, 0.6, 0.7, 0.3]), np.asarray([0, 1, 1, 0])),
+        },
+        threshold_metric="balanced_accuracy",
+    )
+    results["test"]["raw_probability_rows"] = [0.2, 0.6, 0.7, 0.3]
+
+    rows = build_public_binary_evaluation_table(results, model="Transformer")
+
+    assert [row["split"] for row in rows] == ["train", "val", "test"]
+    assert all(row["model"] == "Transformer" for row in rows)
+    assert all(row["threshold_metric"] == "balanced_accuracy" for row in rows)
+    assert all(row["threshold_selection_source"] == "validation" for row in rows)
+    assert all(row["selected_threshold"] == pytest.approx(0.5) for row in rows)
+    assert all(row["selected_threshold_score"] == pytest.approx(1.0) for row in rows)
+    assert rows[-1]["n"] == 4
+    assert rows[-1]["events"] == 2
+    assert rows[-1]["balanced_accuracy"] == pytest.approx(1.0)
+    assert "raw_probability_rows" not in rows[-1]
