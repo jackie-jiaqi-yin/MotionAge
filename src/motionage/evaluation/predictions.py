@@ -175,8 +175,21 @@ def build_public_binary_evaluation_table(
     split_metrics: Mapping[str, Mapping[str, object]],
     *,
     model: str | None = None,
+    model_id: str | None = None,
+    model_labels: Mapping[str, str] | None = None,
+    require_public_model_label: bool = True,
 ) -> list[dict[str, object]]:
     """Build public aggregate evaluation rows from split-level binary metrics."""
+    if model is not None and model_id is not None:
+        raise ValueError("Pass either model or model_id, not both.")
+    public_model = model
+    if model_id is not None:
+        public_model = _public_model_label(
+            model_id,
+            model_labels or {},
+            required=require_public_model_label,
+        )
+
     meta = split_metrics.get("meta", {})
     threshold_metadata = _public_threshold_metadata(meta)
 
@@ -184,7 +197,7 @@ def build_public_binary_evaluation_table(
     for split_name, metrics in split_metrics.items():
         if split_name == "meta":
             continue
-        row = build_public_binary_evaluation_row(metrics, model=model, split=split_name)
+        row = build_public_binary_evaluation_row(metrics, model=public_model, split=split_name)
         row.update(threshold_metadata)
         rows.append(row)
     if not rows:
@@ -203,3 +216,17 @@ def _public_threshold_metadata(meta: Mapping[str, object]) -> dict[str, object]:
         if key in meta:
             metadata[key] = meta[key]
     return metadata
+
+
+def _public_model_label(
+    model_id: str,
+    labels: Mapping[str, str],
+    *,
+    required: bool,
+) -> str:
+    label = labels.get(model_id)
+    if label:
+        return label
+    if not required:
+        return model_id
+    raise ValueError(f"Missing public model labels for model_id: {model_id}")

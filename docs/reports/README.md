@@ -16,6 +16,8 @@ prediction paths, and raw probability arrays.
 Use `build_public_binary_evaluation_table` when starting from split-level
 evaluation output; it carries threshold-selection metadata onto each public
 split row without exposing raw predictions.
+When report scripts start from a model id, pass a reader-facing label map so
+the exported table uses public model names rather than internal identifiers.
 PhenoAge and other benchmark robustness tables should use
 `build_public_benchmark_sensitivity_table` to normalize primary, imputation
 sensitivity, and complete-case sensitivity rows into aggregate public fields

@@ -124,3 +124,58 @@ def test_build_public_binary_evaluation_table_adds_threshold_metadata() -> None:
     assert rows[-1]["events"] == 2
     assert rows[-1]["balanced_accuracy"] == pytest.approx(1.0)
     assert "raw_probability_rows" not in rows[-1]
+
+
+def test_build_public_binary_evaluation_table_resolves_model_id_to_public_label() -> None:
+    results = evaluate_binary_probability_splits(
+        {
+            "test": (np.asarray([0.2, 0.6, 0.7, 0.3]), np.asarray([0, 1, 1, 0])),
+        },
+        selected_threshold=0.5,
+        threshold_selection_source="fixed_threshold",
+    )
+
+    rows = build_public_binary_evaluation_table(
+        results,
+        model_id="transformer_level1_latefusion",
+        model_labels={"transformer_level1_latefusion": "Transformer MotionAge-FRC"},
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["model"] == "Transformer MotionAge-FRC"
+    assert row["split"] == "test"
+    assert row["n"] == 4
+    assert row["events"] == 2
+    assert row["non_events"] == 2
+    assert row["event_rate"] == pytest.approx(0.5)
+    assert row["auroc"] == pytest.approx(1.0)
+    assert row["auprc"] == pytest.approx(1.0)
+    assert row["logloss"] == pytest.approx(results["test"]["logloss"])
+    assert row["brier"] == pytest.approx(results["test"]["brier"])
+    assert row["threshold"] == pytest.approx(0.5)
+    assert row["accuracy"] == pytest.approx(1.0)
+    assert row["balanced_accuracy"] == pytest.approx(1.0)
+    assert row["precision"] == pytest.approx(1.0)
+    assert row["recall"] == pytest.approx(1.0)
+    assert row["f1"] == pytest.approx(1.0)
+    assert row["threshold_metric"] == "balanced_accuracy"
+    assert row["selected_threshold"] == pytest.approx(0.5)
+    assert np.isnan(row["selected_threshold_score"])
+    assert row["threshold_selection_source"] == "fixed_threshold"
+    assert "model_id" not in row
+
+
+def test_build_public_binary_evaluation_table_requires_public_model_labels_for_model_ids() -> None:
+    results = evaluate_binary_probability_splits(
+        {
+            "test": (np.asarray([0.2, 0.6, 0.7, 0.3]), np.asarray([0, 1, 1, 0])),
+        },
+        selected_threshold=0.5,
+    )
+
+    with pytest.raises(ValueError, match="Missing public model labels"):
+        build_public_binary_evaluation_table(
+            results,
+            model_id="gru_level1_latefusion",
+        )
