@@ -14,7 +14,7 @@ from motionage.training.freeze import (
     parse_freeze_schedule,
     resolve_freeze_stage,
 )
-from motionage.training.loss import build_loss_function
+from motionage.training.loss import build_loss_function, compute_validation_loss
 from motionage.training.limits import optional_positive_int
 from motionage.training.log_rows import (
     build_training_log_row,
@@ -73,6 +73,7 @@ __all__ = [
     "build_training_log_row",
     "build_training_summary",
     "build_trainval_refit_splits",
+    "compute_validation_loss",
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
     "is_binary_classification",
