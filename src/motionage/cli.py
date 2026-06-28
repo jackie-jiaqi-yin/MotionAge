@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections import Counter
+from dataclasses import asdict
 from pathlib import Path
 from typing import Sequence
 
 from motionage.paper_manifest import (
+    PaperModelManifestEntry,
     REQUIRED_PAPER_MODEL_FAMILIES,
     validate_paper_model_manifest,
 )
@@ -64,6 +67,12 @@ def _build_validate_paper_models_parser(
         default=None,
         help="required paper-visible model family; may be provided more than once",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="emit_json",
+        help="emit a machine-readable JSON summary",
+    )
     return parser
 
 
@@ -79,7 +88,30 @@ def _validate_paper_models(args: argparse.Namespace) -> int:
         return 1
 
     family_counts = Counter(entry.family for entry in entries)
+    if args.emit_json:
+        payload = _paper_model_manifest_payload(args.manifest_path, entries, family_counts)
+        print(json.dumps(payload, indent=2))
+        return 0
+
     print(f"Validated {len(entries)} paper model configs from {args.manifest_path}.")
     for family in sorted(family_counts):
         print(f"{family}: {family_counts[family]}")
     return 0
+
+
+def _paper_model_manifest_payload(
+    manifest_path: Path,
+    entries: Sequence[PaperModelManifestEntry],
+    family_counts: Counter[str],
+) -> dict[str, object]:
+    model_ids_by_family: dict[str, list[str]] = {}
+    for entry in entries:
+        model_ids_by_family.setdefault(entry.family, []).append(entry.model_id)
+
+    return {
+        "manifest_path": str(manifest_path),
+        "model_count": len(entries),
+        "family_counts": dict(sorted(family_counts.items())),
+        "model_ids_by_family": dict(sorted(model_ids_by_family.items())),
+        "models": [asdict(entry) for entry in entries],
+    }

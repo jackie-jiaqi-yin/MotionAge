@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -22,6 +23,35 @@ def test_validate_paper_models_cli_reports_family_coverage(capsys: pytest.Captur
     assert "lstm: 3" in captured.out
     assert "transformer: 3" in captured.out
     assert captured.err == ""
+
+
+def test_validate_paper_models_cli_can_emit_json_summary(capsys: pytest.CaptureFixture[str]) -> None:
+    from motionage.cli import validate_paper_models_main
+
+    status = validate_paper_models_main(
+        ["--json", str(PAPER_CONFIG_DIR / "mortality_cv_primary_60m.yaml")]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert status == 0
+    assert captured.err == ""
+    assert payload["manifest_path"].endswith("mortality_cv_primary_60m.yaml")
+    assert payload["model_count"] == 10
+    assert payload["family_counts"] == {"gru": 4, "lstm": 3, "transformer": 3}
+    assert payload["model_ids_by_family"]["lstm"] == [
+        "lstm_fitbit_only",
+        "lstm_level1_latefusion",
+        "lstm_level1_residual",
+    ]
+    assert payload["models"][0] == {
+        "model_id": "gru_fitbit_only",
+        "family": "gru",
+        "source_config_path": "configs/paper/gru_fitbit_only_60m.yaml",
+        "source_model_type": "gru_binary",
+        "task_type": "binary_classification",
+        "prediction_mode": None,
+    }
 
 
 def test_validate_paper_models_cli_returns_error_for_invalid_manifest(
@@ -66,6 +96,28 @@ def test_validate_paper_models_console_script_is_registered() -> None:
         pyproject["project"]["scripts"]["motionage-validate-paper-models"]
         == "motionage.cli:validate_paper_models_main"
     )
+
+
+def test_validate_paper_models_console_script_json_output() -> None:
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "motionage-validate-paper-models",
+            "--json",
+            "configs/paper/mortality_cv_primary_60m.yaml",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+    assert payload["model_count"] == 10
+    assert payload["family_counts"]["transformer"] == 3
 
 
 def _write_yaml(path: Path, payload: object) -> None:
