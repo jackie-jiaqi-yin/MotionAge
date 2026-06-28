@@ -1,5 +1,6 @@
 """Training runtime helpers for MotionAge experiments."""
 
+from motionage.training.device import mps_diagnostics, resolve_device
 from motionage.training.evaluate import (
     aggregate_to_participant,
     align_meta_to_predictions,
@@ -48,8 +49,10 @@ __all__ = [
     "configure_torch_cpu_threads",
     "count_trainable_parameters",
     "is_binary_classification",
+    "mps_diagnostics",
     "parse_freeze_schedule",
     "predict",
+    "resolve_device",
     "resolve_final_refit_config",
     "resolve_freeze_stage",
     "resolve_task_type",
