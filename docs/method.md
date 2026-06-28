@@ -35,6 +35,11 @@ Secondary evaluation compares chronological age, benchmark biological-age measur
 - paired confidence intervals,
 - robustness and sensitivity analyses.
 
+Bootstrap summaries should record enough metadata to make the reported interval
+auditable: `n_resamples_requested`, `ci_level`, whether participant resampling
+was `stratified`, and `fold_stratified` when the interval averages
+within-fold paired AUROC deltas.
+
 ## Leakage Controls
 
 All preprocessing that learns parameters from data should fit on training partitions only. This includes covariate imputation, scaling, categorical encoding, MotionAge mapping, and secondary classifiers.

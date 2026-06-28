@@ -28,6 +28,7 @@ def test_bootstrap_binary_auroc_returns_reproducible_ci() -> None:
     assert first == second
     assert first["observed_auroc"] == 1.0
     assert first["ci_lower"] <= first["observed_auroc"] <= first["ci_upper"]
+    assert first["ci_level"] == 0.95
     assert 0 < first["n_resamples_valid"] <= first["n_resamples_requested"]
 
 
@@ -45,6 +46,7 @@ def test_bootstrap_binary_auroc_returns_observed_for_single_class_targets() -> N
         "bootstrap_mean_auroc": 0.5,
         "ci_lower": 0.5,
         "ci_upper": 0.5,
+        "ci_level": 0.95,
         "n_resamples_requested": 50,
         "n_resamples_valid": 0,
     }

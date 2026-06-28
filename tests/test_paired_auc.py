@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,8 @@ from motionage.stats.paired_auc import (
     paired_bootstrap_auc_delta,
     safe_auc,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _score_tables() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -35,6 +38,13 @@ def _score_tables() -> tuple[pd.DataFrame, pd.DataFrame]:
         }
     )
     return left, right
+
+
+def test_method_docs_describe_bootstrap_metadata_fields() -> None:
+    method_doc = (REPO_ROOT / "docs" / "method.md").read_text(encoding="utf-8")
+
+    for term in ("n_resamples_requested", "ci_level", "stratified", "fold_stratified"):
+        assert term in method_doc
 
 
 def test_safe_auc_matches_rank_definition_with_ties() -> None:
@@ -99,7 +109,10 @@ def test_stratified_paired_bootstrap_is_reproducible_and_keeps_resample_count() 
     )
 
     assert first == second
+    assert first["n_resamples_requested"] == 200
     assert first["valid_resamples"] == 200
+    assert first["ci_level"] == 0.95
+    assert first["stratified"] is True
     assert first["ci95_lower"] <= first["mean"] <= first["ci95_upper"]
     assert 0.0 <= first["p_value"] <= 1.0
 
@@ -115,7 +128,10 @@ def test_fold_structured_bootstrap_averages_fold_level_paired_deltas() -> None:
     )
 
     assert result["valid_folds"] == 2
+    assert result["n_resamples_requested"] == 100
     assert result["valid_resamples"] == 100
+    assert result["ci_level"] == 0.95
+    assert result["resampling_unit"] == "fold_stratified"
     assert result["observed_auc_left"] == pytest.approx(1.0)
     assert result["observed_auc_right"] == pytest.approx(0.75)
     assert result["observed_auc_delta"] == pytest.approx(0.25)
@@ -137,4 +153,7 @@ def test_bootstrap_summaries_return_nan_when_auc_is_not_defined() -> None:
     result = paired_bootstrap_auc_delta(paired, n_resamples=10, random_seed=1, stratified=True)
 
     assert result["valid_resamples"] == 0
+    assert result["n_resamples_requested"] == 10
+    assert result["ci_level"] == 0.95
+    assert result["stratified"] is True
     assert math.isnan(result["mean"])

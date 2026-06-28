@@ -109,7 +109,12 @@ def paired_bootstrap_auc_delta(
     pos_idx = np.flatnonzero(y == 1)
     neg_idx = np.flatnonzero(y == 0)
     if pos_idx.size == 0 or neg_idx.size == 0:
-        return _empty_bootstrap_summary()
+        return {
+            **_empty_bootstrap_summary(),
+            "n_resamples_requested": int(n_resamples),
+            "ci_level": 0.95,
+            "stratified": bool(stratified),
+        }
 
     rng = np.random.default_rng(random_seed)
     deltas: list[float] = []
@@ -129,7 +134,12 @@ def paired_bootstrap_auc_delta(
         if np.isfinite(delta):
             deltas.append(float(delta))
 
-    return _summarize_bootstrap(np.asarray(deltas, dtype=float))
+    return {
+        **_summarize_bootstrap(np.asarray(deltas, dtype=float)),
+        "n_resamples_requested": int(n_resamples),
+        "ci_level": 0.95,
+        "stratified": bool(stratified),
+    }
 
 
 def fold_structured_paired_bootstrap_auc_delta(
@@ -164,6 +174,9 @@ def fold_structured_paired_bootstrap_auc_delta(
             "observed_auc_left": float("nan"),
             "observed_auc_right": float("nan"),
             "observed_auc_delta": float("nan"),
+            "n_resamples_requested": int(n_resamples),
+            "ci_level": 0.95,
+            "resampling_unit": "fold_stratified",
             "valid_folds": 0,
         }
 
@@ -194,6 +207,9 @@ def fold_structured_paired_bootstrap_auc_delta(
         "ci95_width": summary["ci95_width"],
         "p_value": summary["p_value"],
         "valid_resamples": summary["valid_resamples"],
+        "n_resamples_requested": int(n_resamples),
+        "ci_level": 0.95,
+        "resampling_unit": "fold_stratified",
         "valid_folds": int(len(fold_payload)),
     }
 

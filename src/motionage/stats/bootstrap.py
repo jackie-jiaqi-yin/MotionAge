@@ -57,6 +57,7 @@ def bootstrap_binary_auroc(
         "bootstrap_mean_auroc": mean_score,
         "ci_lower": lower,
         "ci_upper": upper,
+        "ci_level": float(ci_level),
         "n_resamples_requested": int(n_resamples),
         "n_resamples_valid": int(len(resampled_scores)),
     }
