@@ -31,6 +31,8 @@ uv run motionage validate-paper-models --json --summary-only configs/paper/morta
 
 This command validates the curated GRU, LSTM, and Transformer model families listed in `configs/paper/mortality_cv_primary_60m.yaml`. Use `--markdown --summary-only` when preparing a compact reader-facing summary of the same manifest metadata.
 
+See the [CLI reference](cli.md) for the current public command list.
+
 ## Level 2: Public-Data Reproduction
 
 Purpose: regenerate local NHANES-derived inputs and run paper model configurations.

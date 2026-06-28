@@ -78,6 +78,8 @@ uv run motionage validate-paper-models --json --summary-only configs/paper/morta
 
 The manifest check verifies that the curated paper configs cover the GRU, LSTM, and Transformer families and can emit compact JSON or Markdown summaries for inspection.
 
+See [docs/cli.md](docs/cli.md) for the current public command reference.
+
 ## Reproduction Levels
 
 1. **Synthetic smoke test:** verifies package imports and later CLI entry points without NHANES data.
