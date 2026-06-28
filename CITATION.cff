@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use MotionAge, please cite the associated publication."
+title: "MotionAge"
+version: "0.1.0"
+date-released: "2026-06-27"
+authors:
+  - family-names: "Yin"
+    given-names: "Jackie Jiaqi"
+repository-code: "https://github.com/jackie-jiaqi-yin/MotionAge"
+license: "MIT"
