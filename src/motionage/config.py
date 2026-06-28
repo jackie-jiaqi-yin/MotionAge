@@ -9,6 +9,16 @@ from typing import Any
 import yaml
 
 
+_PUBLIC_CONFIG_PATH_KEY_TERMS = (
+    "checkpoint",
+    "dir",
+    "file",
+    "path",
+    "root",
+    "uri",
+)
+
+
 def load_yaml_config(path: str | Path) -> dict[str, Any]:
     """Load a YAML config, apply anchor inheritance, and resolve local references."""
     config_path = Path(path)
@@ -56,6 +66,19 @@ def save_resolved_config(config: dict[str, Any], path: str | Path) -> None:
     output_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
 
 
+def public_config_snapshot(
+    config: dict[str, Any],
+    *,
+    redact_paths: bool = True,
+    redacted_value: str = "<redacted>",
+) -> dict[str, Any]:
+    """Return a public-safe config snapshot for reports and PR summaries."""
+    snapshot = copy.deepcopy(config)
+    if not redact_paths:
+        return snapshot
+    return _redact_path_like_values(snapshot, redacted_value=redacted_value)
+
+
 def _resolve_leaf(full_key: str, node: dict[str, Any], trial: Any) -> Any:
     if trial is None or "search" not in node:
         return copy.deepcopy(node["default"])
@@ -99,6 +122,26 @@ def _parse_scalar(value: str) -> int | float | bool | str:
     except ValueError:
         pass
     return value
+
+
+def _redact_path_like_values(value: Any, *, redacted_value: str) -> Any:
+    if isinstance(value, dict):
+        redacted: dict[str, Any] = {}
+        for key, nested in value.items():
+            if _is_path_like_config_key(str(key)):
+                redacted[key] = redacted_value
+            else:
+                redacted[key] = _redact_path_like_values(nested, redacted_value=redacted_value)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_path_like_values(item, redacted_value=redacted_value) for item in value]
+    return copy.deepcopy(value)
+
+
+def _is_path_like_config_key(key: str) -> bool:
+    normalized = key.lower()
+    parts = [part for part in normalized.replace("-", "_").split("_") if part]
+    return any(part in _PUBLIC_CONFIG_PATH_KEY_TERMS for part in parts)
 
 
 def _load_raw_yaml(path: Path) -> dict[str, Any]:

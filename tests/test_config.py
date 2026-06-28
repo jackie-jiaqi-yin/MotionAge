@@ -8,6 +8,7 @@ import yaml
 from motionage.config import (
     apply_overrides,
     load_yaml_config,
+    public_config_snapshot,
     resolve_config,
     save_resolved_config,
 )
@@ -128,6 +129,68 @@ def test_apply_overrides_parses_nested_scalar_values() -> None:
         "experiment": {"name": "smoke"},
     }
     assert config["model"]["hidden_size"] == 64
+
+
+def test_public_config_snapshot_redacts_path_like_values_by_default() -> None:
+    config = {
+        "experiment": {
+            "name": "mortality_cv_primary",
+            "init_checkpoint": "local-checkpoints/fold0.pt",
+            "output_dir": "local-runs/fold0",
+        },
+        "data": {
+            "input_path": "local-data/features.parquet",
+            "feature_columns": ["intensity_mean"],
+        },
+        "model": {"type": "transformer_covariates_binary", "d_model": 64},
+        "windowing": {"seq_len": 2016, "stride_ratio": 0.5},
+        "mapping": {
+            "fit_partitions": ["train"],
+            "clip_eps": 0.0001,
+            "weighted_fit": True,
+            "clamp_output_to_fit_age_range": False,
+        },
+    }
+
+    snapshot = public_config_snapshot(config)
+
+    assert snapshot == {
+        "experiment": {
+            "name": "mortality_cv_primary",
+            "init_checkpoint": "<redacted>",
+            "output_dir": "<redacted>",
+        },
+        "data": {
+            "input_path": "<redacted>",
+            "feature_columns": ["intensity_mean"],
+        },
+        "model": {"type": "transformer_covariates_binary", "d_model": 64},
+        "windowing": {"seq_len": 2016, "stride_ratio": 0.5},
+        "mapping": {
+            "fit_partitions": ["train"],
+            "clip_eps": 0.0001,
+            "weighted_fit": True,
+            "clamp_output_to_fit_age_range": False,
+        },
+    }
+
+
+def test_public_config_snapshot_preserves_non_path_profile_keys() -> None:
+    config = {
+        "report": {
+            "profile_label": "high acceleration",
+            "artifact_uri": "local-artifacts/table1.csv",
+        }
+    }
+
+    snapshot = public_config_snapshot(config)
+
+    assert snapshot == {
+        "report": {
+            "profile_label": "high acceleration",
+            "artifact_uri": "<redacted>",
+        }
+    }
 
 
 def test_save_resolved_config_writes_yaml(tmp_path: Path) -> None:

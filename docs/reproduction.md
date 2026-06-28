@@ -40,3 +40,10 @@ uv run python scripts/reproduce/activity_profile_interpretability.py --artifact-
 ```
 
 Artifact replay commands should fail clearly when required artifact files are missing.
+
+## Public Config Snapshots
+
+Use `motionage.config.public_config_snapshot` when showing resolved configs in
+reports, PR summaries, or reproduction notes. It preserves reproducibility knobs
+such as model, windowing, training, and mapping settings while redacting
+path-like values by default.
