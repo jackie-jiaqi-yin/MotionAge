@@ -16,6 +16,103 @@ DEFAULT_AGE_COLUMN = "RIDAGEYR"
 DEFAULT_INTENSITY_COLUMN = "intensity_mean"
 
 
+def plot_metric_interval_forest(
+    data: pd.DataFrame,
+    *,
+    label_col: str = "model_label",
+    point_col: str = "estimate",
+    lower_col: str = "ci_lower",
+    upper_col: str = "ci_upper",
+    xlabel: str = "Metric",
+    title: Optional[str] = "Metric Estimate with Confidence Interval",
+    reference_value: Optional[float] = None,
+    marker_color: str = "#1f77b4",
+    interval_color: str = "#1f77b4",
+    reference_color: str = "0.45",
+    marker_size: float = 36.0,
+    interval_linewidth: float = 1.6,
+    capsize: float = 3.0,
+    figsize: Optional[tuple[int | float, int | float]] = None,
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Plot aggregate metric estimates with confidence intervals."""
+    required = [label_col, point_col, lower_col, upper_col]
+    missing = [column for column in required if column not in data.columns]
+    if missing:
+        raise KeyError(f"Metric interval plot input is missing required columns: {missing}")
+    if data.empty:
+        raise ValueError("Metric interval plot input is empty.")
+    if marker_size <= 0:
+        raise ValueError("marker_size must be positive")
+    if interval_linewidth <= 0:
+        raise ValueError("interval_linewidth must be positive")
+    if capsize < 0:
+        raise ValueError("capsize must be non-negative")
+
+    plot_data = data[[label_col, point_col, lower_col, upper_col]].copy()
+    for column in (point_col, lower_col, upper_col):
+        plot_data[column] = pd.to_numeric(plot_data[column], errors="raise")
+    if (plot_data[lower_col] > plot_data[point_col]).any() or (
+        plot_data[point_col] > plot_data[upper_col]
+    ).any():
+        raise ValueError("Confidence interval bounds must satisfy lower <= point <= upper.")
+
+    if ax is None:
+        default_height = max(2.0, 0.45 * len(plot_data) + 0.8)
+        figsize = figsize if figsize is not None else (6.5, default_height)
+        _, ax = plt.subplots(figsize=figsize)
+
+    y_positions = list(range(len(plot_data)))
+    cap_half_height = 0.06 * capsize
+    for y_position, row in zip(y_positions, plot_data.to_dict(orient="records"), strict=True):
+        lower = float(row[lower_col])
+        upper = float(row[upper_col])
+        ax.plot(
+            [lower, upper],
+            [y_position, y_position],
+            color=interval_color,
+            linewidth=interval_linewidth,
+            zorder=1,
+        )
+        if capsize:
+            ax.plot(
+                [lower, lower],
+                [y_position - cap_half_height, y_position + cap_half_height],
+                color=interval_color,
+                linewidth=interval_linewidth,
+                zorder=1,
+            )
+            ax.plot(
+                [upper, upper],
+                [y_position - cap_half_height, y_position + cap_half_height],
+                color=interval_color,
+                linewidth=interval_linewidth,
+                zorder=1,
+            )
+    ax.scatter(
+        plot_data[point_col],
+        y_positions,
+        s=marker_size,
+        color=marker_color,
+        zorder=2,
+    )
+    if reference_value is not None:
+        ax.axvline(
+            reference_value,
+            color=reference_color,
+            linestyle="--",
+            linewidth=1.0,
+            zorder=0,
+        )
+
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([str(label) for label in plot_data[label_col]])
+    ax.set_xlabel(xlabel)
+    ax.set_title(title if title is not None else "", fontweight="bold")
+    ax.grid(True, axis="x", alpha=0.25, linestyle="--")
+    return ax
+
+
 def plot_intensity_timeseries_by_hour(
     data: pd.DataFrame,
     intensity_col: str = DEFAULT_INTENSITY_COLUMN,

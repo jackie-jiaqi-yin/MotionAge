@@ -6,7 +6,10 @@ import pytest
 
 matplotlib.use("Agg")
 
-from motionage.visualization.plots import plot_intensity_timeseries_by_hour
+from motionage.visualization.plots import (
+    plot_intensity_timeseries_by_hour,
+    plot_metric_interval_forest,
+)
 
 
 def _make_hourly_plot_frame() -> pd.DataFrame:
@@ -121,3 +124,37 @@ def test_plot_intensity_timeseries_by_hour_supports_publication_axis_layout() ->
         "Tue 12:00",
     ]
     assert len(ax.texts) == 0
+
+
+def test_plot_metric_interval_forest_uses_aggregate_confidence_intervals() -> None:
+    frame = pd.DataFrame(
+        [
+            {"model_label": "Age", "auroc": 0.781, "ci_lower": 0.752, "ci_upper": 0.808},
+            {"model_label": "PhenoAge", "auroc": 0.804, "ci_lower": 0.779, "ci_upper": 0.829},
+            {"model_label": "MotionAge-FRC", "auroc": 0.836, "ci_lower": 0.812, "ci_upper": 0.858},
+        ]
+    )
+
+    ax = plot_metric_interval_forest(
+        frame,
+        label_col="model_label",
+        point_col="auroc",
+        lower_col="ci_lower",
+        upper_col="ci_upper",
+        xlabel="AUROC",
+        title=None,
+        reference_value=0.8,
+        marker_color="#1f77b4",
+    )
+
+    assert [tick.get_text() for tick in ax.get_yticklabels()] == [
+        "Age",
+        "PhenoAge",
+        "MotionAge-FRC",
+    ]
+    assert ax.get_xlabel() == "AUROC"
+    assert ax.get_title() == ""
+    assert len(ax.collections) == 1
+    assert len(ax.lines) >= 1
+    assert any(line.get_linestyle() == "--" for line in ax.lines)
+    assert ax.collections[0].get_offsets().shape[0] == 3
