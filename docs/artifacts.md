@@ -48,3 +48,24 @@ Every released artifact bundle should include:
 ## Local Placement
 
 Users should place downloaded artifacts in a local `artifacts/` directory at the repository root. The directory is ignored by git.
+
+## Manifest Checks
+
+Optional artifact bundles can include a `manifest.yaml` file that is readable by
+`motionage.artifacts`. Manifest paths must be relative to the manifest file.
+
+Example:
+
+```yaml
+version: 1
+artifacts:
+  - id: participant_predictions
+    path: predictions/out_of_fold_predictions.parquet
+    description: Participant-level out-of-fold probabilities.
+    sha256: null
+    required: true
+```
+
+The manifest helper reports present files, missing required files, missing
+optional files, and checksum mismatches without requiring artifacts to be stored
+in git.
