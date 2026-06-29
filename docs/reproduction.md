@@ -1,10 +1,10 @@
 # Reproduction
 
-This repository supports three reproduction levels. The initial scaffold only includes package and documentation checks; model and report commands will be added in later PRs.
+This repository supports three reproduction levels. Core library smoke tests are available in the public foundation. Public-data commands are staged as topic PRs add command-line wrappers and approved artifact-replay entry points.
 
 ## Level 1: Synthetic Smoke Test
 
-Purpose: verify that the package imports and CI environment are healthy.
+Purpose: verify that the package imports, model constructors, MotionAge mapping utilities, benchmark helpers, statistics, and reporting helpers behave correctly without NHANES data.
 
 ```bash
 uv sync --extra test
@@ -16,7 +16,7 @@ uv run pytest
 
 Purpose: regenerate local NHANES-derived inputs and run paper model configurations.
 
-Planned command structure:
+Staged command structure:
 
 ```bash
 uv run python scripts/data/prepare_nhanes_inputs.py --config configs/data/nhanes.yaml
@@ -29,7 +29,7 @@ uv run python scripts/analyze/run_motionage.py --config configs/paper/motionage_
 
 Purpose: regenerate paper tables and robustness reports from approved prediction tables or model artifacts.
 
-Planned command structure:
+Staged command structure:
 
 ```bash
 uv run python scripts/reproduce/table1_uncertainty.py --artifact-dir artifacts
