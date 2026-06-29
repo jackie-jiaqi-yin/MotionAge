@@ -25,6 +25,21 @@ uv run python scripts/train/run_mortality_cv.py --config configs/paper/mortality
 uv run python scripts/analyze/run_motionage.py --config configs/paper/motionage_analysis.yaml
 ```
 
+Training summaries should use public aggregate report rows that indicate whether
+the fit was validation-selected or fixed-epoch without validation. Do not include
+checkpoint paths, model weights, private run directories, or per-epoch logs in
+publication-facing summaries.
+When summaries include paper-visible model families such as GRU, LSTM, or
+Transformer, provide reader-facing model labels so exported training rows avoid
+internal model ids.
+Use `motionage.training.build_public_fixed_epoch_plan_summary` before a
+fixed-epoch refit when a manifest needs the planned epoch budget, resume offset,
+remaining epochs, and final-refit strategy without exposing checkpoint paths,
+run directories, or split identifiers.
+Use `motionage.training.build_public_training_log_summary` when a report needs
+training-log context; it reduces per-epoch logs to aggregate epoch, learning-rate,
+freeze-stage, trainable-parameter, and selection-metric metadata.
+
 ## Level 3: Artifact Replay
 
 Purpose: regenerate paper tables and robustness reports from approved prediction tables or model artifacts.
