@@ -58,6 +58,17 @@ auditable: `n_resamples_requested`, `ci_level`, whether participant resampling
 was `stratified`, and `fold_stratified` when the interval averages
 within-fold paired AUROC deltas.
 
+Public second-stage logistic comparisons can use `evaluate_secondary_feature_sets`
+to produce aggregate-only train/test metric rows for MotionAge, MotionAgeAccel,
+and benchmark feature sets.
+
+Binary evaluation summaries should include aggregate split context only:
+`n`, `events`, `non_events`, and `event_rate`. These counts make metrics
+auditable without exposing participant rows or split ID files.
+`build_public_binary_evaluation_row` converts split-level metric dictionaries
+into allowlisted public table rows for GRU, LSTM, Transformer, or benchmark
+comparisons.
+
 ## Leakage Controls
 
 All preprocessing that learns parameters from data should fit on training partitions only. This includes covariate imputation, scaling, categorical encoding, MotionAge mapping, and secondary classifiers.
