@@ -16,6 +16,21 @@ window, participant, and event counts together with `eligible_windows`,
 duration, tau, coverage cutoff, and sequence-length settings without exposing
 participant identifiers or row-level activity traces.
 
+Bootstrap and paired-AUROC interval tables should use
+`public_bootstrap_interval_row` or `public_bootstrap_interval_table` to normalize
+estimates, confidence intervals, resampling metadata, comparison labels, and
+optional p-values into public-safe rows. Public interval rows may retain
+`analysis` and `population` labels so multi-row robustness tables remain
+readable, but should not include raw resample draws, local bootstrap output paths,
+participant rows, private notes, or raw prediction tables.
+When interval summaries carry comparison ids, pass a reader-facing comparison
+label map before exporting public tables.
+For paired model comparisons, `public_paired_auc_interval_table` builds public
+pooled participant, stratified participant, and fold-stratified interval rows
+directly from an in-memory paired score frame. The resulting rows include only
+aggregate AUROC estimates, deltas, sample counts, event counts, confidence
+intervals, p-values, and resampling metadata.
+
 These reports should not include internal response text, ownership notes, or private planning context.
 
 ## Table Utilities
