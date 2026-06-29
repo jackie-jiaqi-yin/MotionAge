@@ -10,7 +10,25 @@ The first-stage model predicts fixed-horizon mortality from minute-level acceler
 - LSTM,
 - Transformer.
 
-Covariate variants include late-fusion and residual-fusion designs. The public package exposes these model families as inspectable implementations and lightweight synthetic-test targets; trained weights and local run outputs remain outside git.
+Covariate variants include late-fusion and residual-fusion designs for the same
+paper-visible model families. The public package exposes these model families as
+inspectable implementations and lightweight synthetic-test targets; trained
+weights and local run outputs remain outside git.
+`public_model_family_catalog` returns aggregate model-family rows for public
+summaries so readers can see the covered GRU, LSTM, Transformer, and static
+covariate variants without exposing checkpoints, weights, or private run paths.
+`public_model_architecture_summary` turns a public model config into allowlisted
+architecture metadata, public hyperparameters, and parameter counts for report
+tables; it does not read checkpoint files, trained weights, or local run
+directories.
+
+## Model Initialization
+
+Checkpoint initialization can be used to warm-start paper-visible GRU, LSTM,
+and Transformer variants when reproducing experiments locally. Public reports
+should summarize initialization with aggregate compatibility counts and loaded
+tensor fractions, while omitting checkpoint paths, weights, and private run
+state by default.
 
 ## MotionAge Mapping
 

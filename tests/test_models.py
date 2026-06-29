@@ -14,6 +14,8 @@ from motionage.models import (
     MaskedTransformerCovariateClassifier,
     build_model,
     list_available_model_types,
+    public_model_architecture_summary,
+    public_model_family_catalog,
 )
 
 
@@ -112,6 +114,80 @@ def test_factory_lists_explicit_binary_model_types() -> None:
         "transformer_binary",
         "transformer_covariates_binary",
     )
+
+
+def test_public_model_family_catalog_covers_paper_visible_variants() -> None:
+    rows = public_model_family_catalog()
+
+    assert tuple(row["model_type"] for row in rows) == list_available_model_types()
+    assert {row["family"] for row in rows} == {"GRU", "LSTM", "Transformer"}
+    assert {row["public_label"] for row in rows} == {
+        "GRU",
+        "GRU + covariates",
+        "LSTM",
+        "LSTM + covariates",
+        "Transformer",
+        "Transformer + covariates",
+    }
+    assert all(row["task"] == "fixed_horizon_mortality_binary_classification" for row in rows)
+    assert all("checkpoint" not in row for row in rows)
+    assert all("path" not in row for row in rows)
+    assert all("weights" not in row for row in rows)
+
+    covariate_rows = [row for row in rows if row["uses_static_covariates"]]
+    assert covariate_rows
+    assert all(row["covariate_prediction_modes"] == ("late_fusion", "residual") for row in covariate_rows)
+
+
+def test_public_model_architecture_summary_reports_allowlisted_counts() -> None:
+    summary = public_model_architecture_summary(
+        _transformer_covariate_config(prediction_mode="residual")
+    )
+
+    assert summary.keys() == {
+        "model_type",
+        "family",
+        "public_label",
+        "task",
+        "sequence_encoder",
+        "uses_static_covariates",
+        "prediction_mode",
+        "num_numeric_features",
+        "categorical_feature_count",
+        "num_layers",
+        "dropout",
+        "hour_emb_dim",
+        "day_emb_dim",
+        "d_model",
+        "nhead",
+        "dim_feedforward",
+        "intensity_proj_dim",
+        "max_seq_len",
+        "parameter_count",
+        "trainable_parameter_count",
+    }
+    assert summary["model_type"] == "transformer_covariates_binary"
+    assert summary["family"] == "Transformer"
+    assert summary["public_label"] == "Transformer + covariates"
+    assert summary["sequence_encoder"] == "masked_transformer"
+    assert summary["uses_static_covariates"] is True
+    assert summary["prediction_mode"] == "residual"
+    assert summary["num_numeric_features"] == 3
+    assert summary["categorical_feature_count"] == 2
+    assert summary["num_layers"] == 1
+    assert summary["dropout"] == 0.0
+    assert summary["hour_emb_dim"] == 4
+    assert summary["day_emb_dim"] == 2
+    assert summary["d_model"] == 16
+    assert summary["nhead"] == 4
+    assert summary["dim_feedforward"] == 32
+    assert summary["intensity_proj_dim"] == 4
+    assert summary["max_seq_len"] == 16
+    assert summary["parameter_count"] > 0
+    assert summary["trainable_parameter_count"] == summary["parameter_count"]
+    assert all("checkpoint" not in key for key in summary)
+    assert all("path" not in key for key in summary)
+    assert all("weight" not in key for key in summary)
 
 
 @pytest.mark.parametrize(

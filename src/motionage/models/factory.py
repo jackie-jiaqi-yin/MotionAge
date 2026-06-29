@@ -137,10 +137,115 @@ _MODEL_REGISTRY: dict[str, ModelBuilder] = {
     "transformer_covariates_binary": _build_transformer_covariates_binary,
 }
 
+_MODEL_FAMILY_CATALOG: tuple[dict[str, object], ...] = (
+    {
+        "model_type": "gru_binary",
+        "family": "GRU",
+        "public_label": "GRU",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "gru_covariates_binary",
+        "family": "GRU",
+        "public_label": "GRU + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+    {
+        "model_type": "lstm_binary",
+        "family": "LSTM",
+        "public_label": "LSTM",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "lstm_covariates_binary",
+        "family": "LSTM",
+        "public_label": "LSTM + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_recurrent",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+    {
+        "model_type": "transformer_binary",
+        "family": "Transformer",
+        "public_label": "Transformer",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_transformer",
+        "uses_static_covariates": False,
+        "covariate_prediction_modes": (),
+    },
+    {
+        "model_type": "transformer_covariates_binary",
+        "family": "Transformer",
+        "public_label": "Transformer + covariates",
+        "task": "fixed_horizon_mortality_binary_classification",
+        "sequence_encoder": "masked_transformer",
+        "uses_static_covariates": True,
+        "covariate_prediction_modes": ("late_fusion", "residual"),
+    },
+)
+
 
 def list_available_model_types() -> tuple[str, ...]:
     """Return sorted available model type keys."""
     return tuple(sorted(_MODEL_REGISTRY.keys()))
+
+
+def public_model_family_catalog() -> tuple[dict[str, object], ...]:
+    """Return public-safe model family rows for publication-facing summaries."""
+    return tuple(dict(row) for row in _MODEL_FAMILY_CATALOG)
+
+
+def public_model_architecture_summary(config: dict[str, Any]) -> dict[str, object]:
+    """Return allowlisted architecture metadata for a model config."""
+    model_type = resolve_model_type(config)
+    model_cfg = config["model"]
+    params = _extract_model_params(model_cfg)
+    catalog_row = _model_catalog_row(model_type)
+    model = build_model(config)
+
+    row: dict[str, object] = {
+        "model_type": model_type,
+        "family": catalog_row["family"],
+        "public_label": catalog_row["public_label"],
+        "task": catalog_row["task"],
+        "sequence_encoder": catalog_row["sequence_encoder"],
+        "uses_static_covariates": catalog_row["uses_static_covariates"],
+        "prediction_mode": str(params.get("prediction_mode", "")),
+        "num_numeric_features": int(params.get("num_numeric_features", 0)),
+        "categorical_feature_count": len(params.get("categorical_cardinalities", [])),
+        "num_layers": int(params["num_layers"]),
+        "dropout": float(params["dropout"]),
+        "hour_emb_dim": int(params["hour_emb_dim"]),
+        "day_emb_dim": int(params["day_emb_dim"]),
+    }
+    if "hidden_size" in params:
+        row["hidden_size"] = int(params["hidden_size"])
+    if "d_model" in params:
+        row["d_model"] = int(params["d_model"])
+    if "nhead" in params:
+        row["nhead"] = int(params["nhead"])
+    if "dim_feedforward" in params:
+        row["dim_feedforward"] = int(params["dim_feedforward"])
+    if "intensity_proj_dim" in params:
+        row["intensity_proj_dim"] = int(params["intensity_proj_dim"])
+    if "max_seq_len" in params:
+        row["max_seq_len"] = int(params["max_seq_len"])
+
+    row["parameter_count"] = int(sum(parameter.numel() for parameter in model.parameters()))
+    row["trainable_parameter_count"] = int(
+        sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+    )
+    return row
 
 
 def resolve_model_type(config: dict[str, Any]) -> str:
@@ -165,3 +270,10 @@ def build_model(config: dict[str, Any]) -> nn.Module:
     model_type = resolve_model_type(config)
     params = _extract_model_params(model_cfg)
     return _MODEL_REGISTRY[model_type](params)
+
+
+def _model_catalog_row(model_type: str) -> dict[str, object]:
+    for row in _MODEL_FAMILY_CATALOG:
+        if row["model_type"] == model_type:
+            return dict(row)
+    raise KeyError(f"Model type {model_type!r} is missing from the public model catalog.")
