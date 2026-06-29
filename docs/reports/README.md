@@ -41,6 +41,18 @@ The `motionage.reporting.tables` module provides small utilities for report repl
 - format table entries as `mean +/- SD`,
 - render lower-triangle paired confidence-interval matrices.
 
+The `motionage.reporting.mortality_cv` module provides mortality-CV report
+helpers that collect fold summaries, aggregate official and secondary feature
+sets, and format aggregate summary rows for publication tables.
+`build_public_mortality_cv_summary_table` converts those summaries into
+reader-facing labels and omits internal model ids, feature ids, and private
+experiment paths from public tables.
+`build_public_mortality_cv_rank_table` ranks aggregate model rows by a selected
+summary metric such as AUROC or AUPRC while keeping only reader-facing labels,
+fold counts, metric means, fold SDs, and formatted mean/SD cells.
+Both public mortality-CV helpers require complete public label maps by default
+so report scripts fail before internal ids appear in exported tables.
+
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.
 
