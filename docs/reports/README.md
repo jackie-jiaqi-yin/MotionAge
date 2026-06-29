@@ -43,3 +43,25 @@ The `motionage.reporting.tables` module provides small utilities for report repl
 
 These utilities operate on in-memory tables so report scripts can use released
 artifact inputs without hard-coding private experiment paths.
+
+## Figure Utilities
+
+The `motionage.visualization` module provides figure helpers for public report
+inputs, including aggregate confidence-interval forest plots and hourly
+activity trajectories by age group. These helpers operate on in-memory summary
+tables so report scripts do not need to hard-code private experiment paths or
+participant-level records.
+Use `build_public_metric_interval_frame` before interval forest plots when
+report artifacts include extra internal columns. It keeps only aggregate labels,
+point estimates, confidence bounds, and metric labels, excluding paths, raw
+predictions, and private resample draws.
+Use `build_public_lower_triangle_ci_heatmap_frame` before lower-triangle paired confidence-interval heatmaps.
+It keeps only ordered aggregate row/column labels, deltas, confidence bounds,
+significance flags, and annotations, excluding paths and private resample draws.
+Use `build_public_motionage_mapping_frame` before MotionAge mapping diagnostic
+plots when report artifacts include extra internal columns. It keeps only
+aggregate age-bin mapping diagnostics, sex labels, representative/fitted
+probabilities, logits, and optional aggregate counts, excluding source paths,
+raw row references, split identifiers, and participant-level records.
+The mapping frame requires sex values to resolve through default or explicit
+public labels before they can appear in figure inputs.
