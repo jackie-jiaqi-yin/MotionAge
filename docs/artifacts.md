@@ -23,13 +23,9 @@ Recommended artifact layout:
 artifacts/
   README.md
   checksums.sha256
-  predictions/
-    out_of_fold_predictions.parquet
-    participant_motionage.parquet
   reports/
-    table1_inputs.parquet
-    robustness_inputs.parquet
-  models/
+    table1_inputs.csv
+    robustness_inputs.csv
     model-card.md
 ```
 
@@ -48,3 +44,39 @@ Every released artifact bundle should include:
 ## Local Placement
 
 Users should place downloaded artifacts in a local `artifacts/` directory at the repository root. The directory is ignored by git.
+
+Manifest paths must be relative to the artifact bundle and must not use parent
+directory segments. The validator rejects absolute paths and `..` escapes so a
+public manifest cannot point at local files outside the approved bundle.
+
+## Manifest Checks
+
+Optional artifact bundles can include a `manifest.yaml` file that is readable by
+`motionage.artifacts`. Manifest paths must be relative to the manifest file.
+
+Example:
+
+```yaml
+version: 1
+artifacts:
+  - id: aggregate_table_inputs
+    path: reports/table1_inputs.csv
+    description: Aggregate synthetic inputs for reproducing report formatting.
+    sha256: null
+    required: true
+```
+
+Use YAML booleans for `required` (`true` or `false`), not quoted strings.
+
+The manifest helper reports present files, missing required files, missing
+optional files, and checksum mismatches without requiring artifacts to be stored
+in git. The JSON report also includes a `summary` block with
+`total_artifacts`, `required_artifacts`, `optional_artifacts`, and
+`checksum_protected_artifacts` counts so readers can inspect expected bundle
+coverage before downloading or validating private artifact contents.
+
+The report also includes `public_boundary_issues`. This field flags manifest
+entries whose ids, paths, descriptions, or other manifest metadata look unsafe
+for the public repository boundary, including raw data, participant or subject
+rows, checkpoints, model weight files, private paths, and restricted response
+materials.
