@@ -9,6 +9,13 @@ Planned reports:
 - Wear-aware preprocessing sensitivity
 - Activity-profile interpretability
 
+Wear-aware preprocessing sensitivity tables should report aggregate retained
+window, participant, and event counts together with `eligible_windows`,
+`window_retention_rate`, `participant_retention_rate`, and
+`event_retention_rate`. These rows are intended to compare Choi non-wear
+duration, tau, coverage cutoff, and sequence-length settings without exposing
+participant identifiers or row-level activity traces.
+
 These reports should not include internal response text, ownership notes, or private planning context.
 
 ## Table Utilities
