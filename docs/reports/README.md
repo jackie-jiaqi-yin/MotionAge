@@ -96,3 +96,14 @@ probabilities, logits, and optional aggregate counts, excluding source paths,
 raw row references, split identifiers, and participant-level records.
 The mapping frame requires sex values to resolve through default or explicit
 public labels before they can appear in figure inputs.
+
+## Source-Prediction Utilities
+
+Source-prediction reports should use
+`motionage.analysis.motionage.summarize_source_predictions` to publish split-level
+counts, event rates, window totals, and probability summaries. Use
+`motionage.analysis.motionage.build_public_source_prediction_report_table` when a
+report needs side-by-side GRU, LSTM, Transformer, or local source-model rows. Do
+not commit source prediction tables that contain one row per participant. When
+report inputs use internal source-model keys, pass a reader-facing label map so
+public tables export display labels rather than internal identifiers.
