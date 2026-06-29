@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_readme_inventory_matches_public_scaffold() -> None:
-    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    readme = _read_doc("README.md")
 
     for term in (
         "GRU",
@@ -26,15 +26,65 @@ def test_readme_inventory_matches_public_scaffold() -> None:
 
 
 def test_reproduction_doc_describes_current_public_scope() -> None:
-    reproduction = (REPO_ROOT / "docs" / "reproduction.md").read_text(encoding="utf-8")
+    reproduction = _read_doc("docs/reproduction.md")
 
     assert "initial scaffold only includes package and documentation checks" not in reproduction
     assert "Core library smoke tests" in reproduction
     assert "Public-data commands are staged" in reproduction
 
 
+def test_public_docs_include_paper_manifest_validation_recipe() -> None:
+    readme = _read_doc("README.md")
+    reproduction = _read_doc("docs/reproduction.md")
+
+    for text in (readme, reproduction):
+        assert "motionage-validate-paper-models" in text
+        assert "motionage validate-paper-models" in text
+        assert "motionage --version" in text
+        assert "motionage-validate-paper-models --version" in text
+        assert "motionage doctor" in text
+        assert "motionage doctor --json" in text
+        assert "motionage doctor --json --output" in text
+        assert "configs/paper/mortality_cv_primary_60m.yaml" in text
+        assert "--summary-only" in text
+        assert "manifest_readiness" in text
+        assert "analysis_template" in text
+        assert "public_boundary" in text
+        assert "not-ready" in text
+        for family in ("GRU", "LSTM", "Transformer"):
+            assert family in text
+
+
+def test_public_docs_include_cli_reference() -> None:
+    readme = _read_doc("README.md")
+    reproduction = _read_doc("docs/reproduction.md")
+    cli_reference = _read_doc("docs/cli.md")
+
+    assert "[docs/cli.md](docs/cli.md)" in readme
+    assert "[CLI reference](cli.md)" in reproduction
+    assert cli_reference.startswith("# CLI Reference\n")
+    assert "Manifest Readiness" in cli_reference
+    assert "MotionAge Analysis Template" in cli_reference
+    assert "Public Boundary" in cli_reference
+    assert "contains_raw_data" in cli_reference
+    assert "contains_public_config_metadata" in cli_reference
+    for command in (
+        "uv run motionage --version",
+        "uv run motionage doctor",
+        "uv run motionage doctor --json",
+        "uv run motionage doctor --json --output reports/doctor.json",
+        "uv run motionage-validate-paper-models --json --summary-only",
+        "uv run motionage validate-paper-models --json --summary-only",
+    ):
+        assert command in cli_reference
+
+
+def _read_doc(path: str) -> str:
+    return (REPO_ROOT / path).read_text(encoding="utf-8")
+
+
 def test_public_metadata_links_are_publication_ready() -> None:
-    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    readme = _read_doc("README.md")
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     citation = yaml.safe_load((REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8"))
 

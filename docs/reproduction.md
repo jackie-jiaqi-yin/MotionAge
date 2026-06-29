@@ -1,16 +1,46 @@
 # Reproduction
 
-This repository supports three reproduction levels. Core library smoke tests are available in the public foundation. Public-data commands are staged as topic PRs add command-line wrappers and approved artifact-replay entry points.
+This repository supports three reproduction levels. Core library smoke tests and paper model manifest validation are available in the current public stack. Public-data commands are staged as topic PRs add command-line wrappers and approved artifact-replay entry points.
 
-## Level 1: Synthetic Smoke Test
+## Level 1: Synthetic Smoke and Paper Config Checks
 
-Purpose: verify that the package imports, model constructors, MotionAge mapping utilities, benchmark helpers, statistics, and reporting helpers behave correctly without NHANES data.
+Purpose: verify that the package imports, model constructors, MotionAge mapping utilities, benchmark helpers, statistics, reporting helpers, CLI entry points, and paper-visible model config inventory behave correctly without NHANES data.
 
 ```bash
 uv sync --extra test
+uv run motionage --version
+uv run motionage-validate-paper-models --version
+uv run motionage doctor
+uv run motionage doctor --json
+uv run motionage doctor --json --output reports/doctor.json
 uv run python -m compileall src
 uv run pytest
 ```
+
+The paper manifest can be checked without raw NHANES files, processed participant tables, or trained checkpoints:
+
+```bash
+uv run motionage-validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
+```
+
+Equivalent top-level CLI form:
+
+```bash
+uv run motionage validate-paper-models --json --summary-only configs/paper/mortality_cv_primary_60m.yaml
+```
+
+This command validates the curated GRU, LSTM, and Transformer model families
+listed in `configs/paper/mortality_cv_primary_60m.yaml`. Default text output
+includes the analysis-template path, compact public-boundary flags, readiness
+status, and family counts. JSON output includes `analysis_template`,
+`public_boundary`, and `manifest_readiness` blocks with MotionAge
+analysis-template metadata, public-scope flags, and ready/not-ready aggregate
+counts; Markdown output includes the same information in
+`MotionAge Analysis Template`, `Public Boundary`, and `Manifest Readiness`
+sections. Use `--markdown --summary-only` when preparing a compact
+reader-facing summary of the same manifest metadata.
+
+See the [CLI reference](cli.md) for the current public command list.
 
 ## Level 2: Public-Data Reproduction
 

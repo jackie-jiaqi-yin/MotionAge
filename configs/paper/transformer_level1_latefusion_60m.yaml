@@ -1,0 +1,65 @@
+experiment:
+  name: transformer_level1_latefusion_60m
+  output_dir: experiments/paper/transformer_level1_latefusion_60m
+  init_checkpoint: null
+  init_strict: false
+task:
+  type: binary_classification
+  selection_metric: auprc
+  threshold_metric: balanced_accuracy
+labeling:
+  followup_month_column: permth_int
+  followup_months: 60
+  target_definition: I(mortstat = 1 and permth_int <= 60)
+data:
+  parquet_path: data/processed/activity_mortstat/activity_mortstat_joined.parquet
+  target_source: parquet
+  feature_columns: [intensity_mean, PAXHOUR, PAXDAY, attention_flag]
+  target_column: mortstat
+  id_column: SEQN
+  normalize_intensity: true
+  covariates:
+    enabled: true
+    parquet_path: data/processed/nhanes_mortality_covariates/nhanes_mortality_covariates_l1.parquet
+    metadata_path: data/processed/nhanes_mortality_covariates/metadata_l1.yaml
+    levels: [1]
+split:
+  mode: precomputed
+  precomputed_dir: data/processed/splits/mortstat_60m_seed42
+  test_size: 0.2
+  val_size: 0.25
+  random_seed: 42
+windowing:
+  seq_len: 576
+  stride_ratio: 1.0
+  target_mode: participant
+  min_attention_ratio: 0.3
+model:
+  type: transformer_covariates_binary
+  d_model: 96
+  nhead: 4
+  num_layers: 3
+  dim_feedforward: 128
+  dropout: 0.188
+  hour_emb_dim: 16
+  day_emb_dim: 8
+  intensity_proj_dim: 16
+  max_seq_len: 1008
+  num_numeric_features: 8
+  categorical_cardinalities: [3]
+  categorical_embedding_dim: 4
+  covariate_hidden_dim: 64
+  covariate_output_dim: 32
+  fusion_hidden_dim: 64
+  fusion_dropout: 0.1
+  prediction_mode: late_fusion
+  zero_init_residual: false
+training:
+  max_epochs: 80
+  batch_size: 64
+  eval_batch_size: 64
+  learning_rate: 0.00039
+  weight_decay: 0.00005
+  early_stopping_patience: 10
+  grad_clip_norm: 1.0
+device: auto
