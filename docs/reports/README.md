@@ -27,4 +27,6 @@ Source-prediction reports should use
 counts, event rates, window totals, and probability summaries. Use
 `motionage.analysis.motionage.build_public_source_prediction_report_table` when a
 report needs side-by-side GRU, LSTM, Transformer, or local source-model rows. Do
-not commit source prediction tables that contain one row per participant.
+not commit source prediction tables that contain one row per participant. When
+report inputs use internal source-model keys, pass a reader-facing label map so
+public tables export display labels rather than internal identifiers.

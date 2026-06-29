@@ -296,6 +296,45 @@ def test_build_public_source_prediction_report_table_labels_models_without_ident
         assert "checkpoint_path" not in row
 
 
+def test_build_public_source_prediction_report_table_resolves_source_model_ids() -> None:
+    source_frame = pd.DataFrame(
+        {
+            "sample_key": ["p1", "p2"],
+            "split": ["test", "test"],
+            "mortstat_60m": [0, 1],
+            "participant_probability": [0.2, 0.6],
+            "n_windows": [2, 4],
+        }
+    )
+
+    rows = build_public_source_prediction_report_table(
+        {"gru_level1_latefusion": source_frame},
+        target_column="mortstat_60m",
+        source_model_labels={"gru_level1_latefusion": "GRU MotionAge-FRC"},
+    )
+
+    assert rows[0]["source_model"] == "GRU MotionAge-FRC"
+
+
+def test_build_public_source_prediction_report_table_requires_public_source_model_labels() -> None:
+    source_frame = pd.DataFrame(
+        {
+            "sample_key": ["p1", "p2"],
+            "split": ["test", "test"],
+            "mortstat_60m": [0, 1],
+            "participant_probability": [0.2, 0.6],
+            "n_windows": [2, 4],
+        }
+    )
+
+    with pytest.raises(ValueError, match="Missing public source model labels"):
+        build_public_source_prediction_report_table(
+            {"transformer_level1_latefusion": source_frame},
+            target_column="mortstat_60m",
+            require_public_source_model_labels=True,
+        )
+
+
 def test_method_docs_include_source_prediction_boundary() -> None:
     text = Path(__file__).resolve().parents[1].joinpath("docs", "method.md").read_text()
     reports_text = Path(__file__).resolve().parents[1].joinpath("docs", "reports", "README.md").read_text()

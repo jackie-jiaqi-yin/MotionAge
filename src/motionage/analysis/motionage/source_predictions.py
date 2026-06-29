@@ -8,6 +8,13 @@ import numpy as np
 import pandas as pd
 
 
+DEFAULT_PUBLIC_SOURCE_MODEL_LABELS = {
+    "GRU": "GRU",
+    "LSTM": "LSTM",
+    "Transformer": "Transformer",
+}
+
+
 def logits_to_probabilities(logits: np.ndarray | list[float] | pd.Series) -> np.ndarray:
     """Convert logits to probabilities with a numerically stable sigmoid."""
     logits_arr = np.asarray(logits, dtype=np.float64)
@@ -162,13 +169,22 @@ def build_public_source_prediction_report_table(
     participant_probability_column: str = "participant_probability",
     n_windows_column: str = "n_windows",
     source_model_column: str = "source_model",
+    source_model_labels: Mapping[str, str] | None = None,
+    require_public_source_model_labels: bool = True,
 ) -> list[dict[str, float | int | str]]:
     """Build aggregate public report rows for one or more source models."""
     items = source_predictions.items() if isinstance(source_predictions, Mapping) else source_predictions
+    label_lookup = dict(DEFAULT_PUBLIC_SOURCE_MODEL_LABELS)
+    if source_model_labels:
+        label_lookup.update(source_model_labels)
 
     rows: list[dict[str, float | int | str]] = []
     for source_model, participants in items:
-        source_label = str(source_model).strip()
+        source_label = _public_source_model_label(
+            str(source_model).strip(),
+            label_lookup,
+            required=require_public_source_model_labels,
+        )
         if not source_label:
             raise ValueError("Source model labels must be non-empty.")
         summary_rows = summarize_source_predictions(
@@ -183,6 +199,20 @@ def build_public_source_prediction_report_table(
     if not rows:
         raise ValueError("At least one source prediction table is required.")
     return rows
+
+
+def _public_source_model_label(
+    source_model: str,
+    labels: Mapping[str, str],
+    *,
+    required: bool,
+) -> str:
+    label = labels.get(source_model)
+    if label:
+        return label
+    if not required:
+        return source_model
+    raise ValueError(f"Missing public source model labels for source model: {source_model}")
 
 
 def _validate_required_columns(df: pd.DataFrame, columns: list[str]) -> None:
