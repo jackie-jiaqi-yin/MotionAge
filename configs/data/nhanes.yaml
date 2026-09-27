@@ -1,0 +1,36 @@
+inputs:
+  activity:
+    - data/raw/nhanes/2003-2004/PAXRAW_C.XPT
+    - data/raw/nhanes/2005-2006/PAXRAW_D.XPT
+  participants:
+    - files: [data/raw/nhanes/2003-2004/DEMO_C.XPT, data/raw/nhanes/2003-2004/BMX_C.XPT, data/raw/nhanes/2003-2004/BPX_C.XPT]
+    - files: [data/raw/nhanes/2005-2006/DEMO_D.XPT, data/raw/nhanes/2005-2006/BMX_D.XPT, data/raw/nhanes/2005-2006/BPX_D.XPT]
+  mortality:
+    - data/raw/mortality/NHANES_2003_2004_MORT_2019_PUBLIC.dat
+    - data/raw/mortality/NHANES_2005_2006_MORT_2019_PUBLIC.dat
+output_dir: data/processed
+chunksize: 250000
+min_age: 18
+followup_months: 60
+require_complete_followup: true
+missing_values:
+  INDHHINC: [77, 99]
+mean_features:
+  BPXDI: [BPXDI1, BPXDI2, BPXDI3, BPXDI4]
+  BPXSY: [BPXSY1, BPXSY2, BPXSY3, BPXSY4]
+preprocessing:
+  require_calibration: true
+  epoch_minutes: 5
+  attention_tau: 0.2
+  nonwear:
+    min_period_len: 90
+    spike_tolerance: 2
+    spike_stim_max: 100
+    spike_surround_min: 30
+covariate_bundles:
+  l1:
+    numeric_columns: [RIDAGEYR, BMXBMI, BMXWAIST, BPXDI, BPXSY]
+    categorical_columns: [INDHHINC, RIAGENDR]
+  age:
+    numeric_columns: [RIDAGEYR]
+    categorical_columns: [RIAGENDR]
