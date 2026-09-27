@@ -1,6 +1,26 @@
 # CLI Reference
 
-This page lists the public MotionAge commands that are available without raw NHANES files, processed participant tables, trained checkpoints, or artifact bundles.
+Workflow commands read local inputs specified by configuration. The synthetic
+example creates its own inputs. Metadata and environment commands need no data.
+
+## Executable Workflows
+
+All workflow scripts accept `--config FILE` and repeated `--set KEY=VALUE` overrides.
+Run from the repository root; config paths refer to the working directory.
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/data/prepare_nhanes_inputs.py` | Prepare local raw inputs and covariate bundles |
+| `scripts/data/make_splits.py` | Stratified participant splits or outer CV folds |
+| `scripts/train/run_training.py` | Train one model or perform a fixed-epoch refit |
+| `scripts/train/run_mortality_cv.py` | Execute a CV model manifest |
+| `scripts/predict/predict.py` | Predict using saved weights and preprocessing |
+| `scripts/analyze/run_motionage.py` | Fit/apply MotionAge and evaluate local predictions |
+| `scripts/analyze/evaluate_predictions.py` | General metrics and bootstrap comparisons |
+
+See [the runnable workflow](reproduction.md) for commands and configuration links.
+The optional `scripts/reproduce/validate_artifacts.py` checks a local artifact
+manifest; it does not generate publication tables.
 
 ## Version
 

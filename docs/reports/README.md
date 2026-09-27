@@ -1,13 +1,9 @@
 # Reports
 
-This directory will hold neutral, publication-facing summaries generated from reproducible scripts.
-
-Planned reports:
-
-- Table 1 uncertainty and paired AUROC intervals
-- PhenoAge missingness, imputation, and complete-case sensitivity
-- Wear-aware preprocessing sensitivity
-- Activity-profile interpretability
+The package exposes generic aggregate reporting and visualization helpers for
+method exploration and downstream applications. Executable [analysis workflows](../analysis.md)
+write local scores, metrics and uncertainty. Publication-specific table/figure
+assembly and historical experiment summaries are outside this repository's scope.
 
 Wear-aware preprocessing sensitivity tables should report aggregate retained
 window, participant, and event counts together with `eligible_windows`,
@@ -54,7 +50,7 @@ These reports should not include internal response text, ownership notes, or pri
 
 ## Table Utilities
 
-The `motionage.reporting.tables` module provides small utilities for report replay:
+The `motionage.reporting.tables` module provides generic table utilities:
 
 - summarize fold-level metrics as mean and fold standard deviation,
 - format table entries as `mean +/- SD`,
