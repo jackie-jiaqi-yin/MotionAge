@@ -1,0 +1,8 @@
+participants_path: data/processed/participants.parquet
+output_dir: data/processed/splits/mortstat_60m_cv_seed42
+id_column: SEQN
+target_column: mortstat
+n_folds: 5
+random_seed: 42
+val_size: 0.25
+test_size: 0.2
