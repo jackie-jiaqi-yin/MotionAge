@@ -12,7 +12,7 @@ labeling:
   followup_months: 60
   target_definition: I(mortstat = 1 and permth_int <= 60)
 data:
-  parquet_path: examples/synthetic/activity_mortstat_joined.parquet
+  parquet_path: examples/synthetic/generated/activity_mortstat_joined.parquet
   target_source: parquet
   feature_columns: [intensity_mean, PAXHOUR, PAXDAY, attention_flag]
   target_column: mortstat
@@ -44,5 +44,4 @@ training:
   early_stopping_patience: 2
   grad_clip_norm: 1.0
   limit_train_batches: 2
-  limit_val_batches: 2
 device: cpu

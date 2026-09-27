@@ -15,7 +15,11 @@ The repository may track:
 
 ## External Artifacts
 
-Approved release artifacts may be distributed through GitHub Releases, Zenodo, or another durable archive. These artifacts should be optional for installing the package but useful for reproducing paper tables without retraining models.
+Optional, explicitly approved artifacts may be distributed separately through a
+durable archive. No external bundle is required to install the package or run
+the synthetic workflow. The public package does not promise a publication-table
+replay bundle. Local training and analysis outputs follow the schemas described
+in [training](training.md) and [analysis](analysis.md).
 
 Recommended artifact layout:
 
@@ -24,7 +28,7 @@ artifacts/
   README.md
   checksums.sha256
   reports/
-    table1_inputs.csv
+    aggregate_metrics.csv
     robustness_inputs.csv
     model-card.md
 ```
@@ -60,7 +64,7 @@ Example:
 version: 1
 artifacts:
   - id: aggregate_table_inputs
-    path: reports/table1_inputs.csv
+    path: reports/aggregate_metrics.csv
     description: Aggregate synthetic inputs for reproducing report formatting.
     sha256: null
     required: true

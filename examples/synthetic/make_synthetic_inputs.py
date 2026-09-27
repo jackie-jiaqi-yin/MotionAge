@@ -63,7 +63,8 @@ def generate_synthetic_inputs(
                 activity_rows.append(
                     {
                         "SEQN": int(seqn),
-                        "PAXDAY": int(day),
+                        "PAXN": int(day * 24 + hour + 1),
+                        "PAXDAY": int(day % 7 + 1),
                         "PAXHOUR": int(hour),
                         "intensity_mean": round(float(intensity), 4),
                         "attention_flag": int(attention_flag),

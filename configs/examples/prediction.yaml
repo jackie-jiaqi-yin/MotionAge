@@ -1,0 +1,6 @@
+checkpoint_dir: outputs/synthetic_workflow/training
+data:
+  parquet_path: outputs/synthetic_workflow/processed/activity_mortstat/activity_mortstat_joined.parquet
+  participants_path: outputs/synthetic_workflow/processed/participants.parquet
+output_path: outputs/synthetic_workflow/reused_predictions.parquet
+device: cpu

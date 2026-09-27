@@ -79,7 +79,7 @@ def test_training_configs_use_public_relative_inputs_and_ignored_outputs() -> No
             assert str(experiment["output_dir"]).startswith(("outputs/", "experiments/"))
         data = payload.get("data")
         if isinstance(data, dict) and "parquet_path" in data:
-            assert str(data["parquet_path"]).startswith(("data/processed/", "examples/"))
+            assert str(data["parquet_path"]).startswith(("data/processed/", "examples/", "outputs/"))
 
 
 def test_mortality_cv_and_motionage_analysis_reference_curated_configs() -> None:

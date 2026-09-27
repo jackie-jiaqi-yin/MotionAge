@@ -21,6 +21,8 @@ venv/
 /outputs/
 /logs/
 /tmp/
+/reports/
+/examples/synthetic/generated/
 
 # Model and array artifacts
 *.pt
