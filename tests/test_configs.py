@@ -40,7 +40,7 @@ BANNED_TEXT = (
 def test_paper_config_inventory_is_complete() -> None:
     assert _names(PAPER_CONFIG_DIR) == EXPECTED_PAPER_CONFIGS
     assert _names(SENSITIVITY_CONFIG_DIR) == {"wear_coverage04_60m.yaml"}
-    assert _names(EXAMPLE_CONFIG_DIR) == {"synthetic_smoke.yaml"}
+    assert {"synthetic_smoke.yaml", "evaluation.yaml"}.issubset(_names(EXAMPLE_CONFIG_DIR))
 
 
 def test_model_configs_cover_required_paper_families_and_modes() -> None:

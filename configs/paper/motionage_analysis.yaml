@@ -2,6 +2,7 @@ analysis:
   name: motionage_primary_60m
   output_dir: outputs/motionage_primary_60m
   participant_predictions_dir: outputs/mortality_cv_primary_60m
+  participants_path: data/processed/participants.parquet
   id_column: SEQN
   age_column: RIDAGEYR
   sex_column: RIAGENDR
@@ -16,6 +17,24 @@ mapping:
   weighted_fit: true
   clamp_output_to_fit_age_range: false
   min_stratum_participants: 100
+  representative_probability: median
+  require_positive_beta: true
+evaluation:
+  enabled: true
+  split: test
+  fit_partitions: [train]
+  baseline_feature_set: chronological_age
+  feature_sets:
+    - name: chronological_age
+      columns: [RIDAGEYR]
+    - name: motionage
+      columns: [MotionAge]
+    - name: motionage_accel
+      columns: [RIDAGEYR, MotionAgeAccel]
+  bootstrap:
+    n_resamples: 1000
+    ci_level: 0.95
+    random_seed: 42
 outputs:
   participant_scores: outputs/motionage_primary_60m/participant_scores.csv
   mapping_parameters: outputs/motionage_primary_60m/mapping_parameters.csv
