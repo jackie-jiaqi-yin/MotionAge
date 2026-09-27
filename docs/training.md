@@ -86,10 +86,11 @@ device: cpu
 ```
 
 ```bash
-uv run python scripts/predict/predict.py --config configs/local_prediction.yaml
+uv run python scripts/predict/predict.py --config configs/examples/prediction.yaml
 ```
 
-The prediction config above is an example to place locally. Covariate models also
+The checked-in prediction config reuses the default synthetic workflow's model
+and inputs. Adapt its paths as illustrated above for new participants. Covariate models also
 need `data.covariates.parquet_path` pointing to the new participant covariates.
 Mortality labels are optional at prediction time. Preprocessing state and model
 weights are loaded from the training directory and are never refitted.

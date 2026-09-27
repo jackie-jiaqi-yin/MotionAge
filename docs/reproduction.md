@@ -55,9 +55,11 @@ All data, IDs, weights and participant scores remain local and ignored by Git.
 
 ## General Evaluation
 
-After the default synthetic example, evaluate its held-out predictions separately:
+After the default synthetic example, reload its model and evaluate its held-out
+predictions separately:
 
 ```bash
+uv run python scripts/predict/predict.py --config configs/examples/prediction.yaml
 uv run python scripts/analyze/evaluate_predictions.py --config configs/examples/evaluation.yaml
 ```
 
