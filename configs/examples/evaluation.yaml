@@ -1,0 +1,10 @@
+predictions_path: outputs/synthetic_workflow/training/participant_predictions.parquet
+output_path: outputs/synthetic_workflow/prediction_evaluation.json
+id_column: SEQN
+target_column: mortstat
+probability_columns: [probability]
+split: test
+bootstrap:
+  n_resamples: 1000
+  ci_level: 0.95
+  random_seed: 42
